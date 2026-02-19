@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 function AnimatedNumber({ value }) {
     const ref = useRef(null);
@@ -6,7 +6,7 @@ function AnimatedNumber({ value }) {
     useEffect(() => {
         const el = ref.current;
         if (!el) return;
-        const duration = 1000;
+        const duration = 1200;
         const start = performance.now();
 
         function update(now) {
@@ -25,52 +25,52 @@ function AnimatedNumber({ value }) {
 }
 
 const STAT_CONFIG = [
-    { key: 'total_accounts_analyzed', label: 'Accounts Analyzed', icon: '🏦' },
-    { key: 'suspicious_accounts_flagged', label: 'Suspicious Accounts', icon: '🚨', accent: true },
-    { key: 'fraud_rings_detected', label: 'Fraud Rings', icon: '🔗', accent: true },
-    { key: 'total_transactions', label: 'Transactions', icon: '📄' },
+    { key: 'total_accounts_analyzed', label: 'Accounts Analyzed', color: 'accent' },
+    { key: 'suspicious_accounts_flagged', label: 'Suspicious Flagged', color: 'danger' },
+    { key: 'fraud_rings_detected', label: 'Fraud Rings', color: 'danger' },
+    { key: 'total_transactions', label: 'Transactions', color: 'accent' },
 ];
 
 export default function StatsGrid({ summary }) {
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setVisible(true), 100);
+        return () => clearTimeout(timer);
+    }, []);
+
     return (
-        <section>
-            <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
-                <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                    <span className="text-secondary-accent">📊</span> Analysis Summary
+        <section className="stats-grid-section">
+            <div className="stats-grid__header">
+                <h2 className="stats-grid__title">
+                    Analysis Summary
                 </h2>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                {STAT_CONFIG.map((stat) => (
+            <div className="stats-grid">
+                {STAT_CONFIG.map((stat, idx) => (
                     <div
                         key={stat.key}
-                        className={`
-              relative rounded-xl px-5 py-6 border transition-all duration-300
-              ${stat.accent
-                                ? 'border-danger/15 bg-danger/[0.03] hover:border-danger/30 hover:shadow-[0_0_30px_rgba(251,113,133,0.06)]'
-                                : 'border-primary-accent/10 bg-primary-accent/[0.02] hover:border-primary-accent/20 hover:bg-primary-accent/[0.04]'
-                            }
-            `}
+                        className={`stats-card stats-card--${stat.color} ${visible ? 'stats-card--visible' : ''}`}
+                        style={{ transitionDelay: `${idx * 80}ms` }}
                     >
-                        <div className="text-2xl mb-3">{stat.icon}</div>
-                        <div className={`text-2xl font-black font-mono tracking-tight ${stat.accent ? 'text-danger' : 'text-text-primary/90'}`}>
+
+                        <div className={`stats-card__value stats-card__value--${stat.color}`}>
                             <AnimatedNumber value={summary[stat.key]} />
                         </div>
-                        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500 mt-1.5">
-                            {stat.label}
-                        </div>
+                        <div className="stats-card__label">{stat.label}</div>
                     </div>
                 ))}
 
-                {/* Processing time — special card */}
-                <div className="relative rounded-xl px-5 py-6 border border-primary-accent/10 bg-primary-accent/[0.02] hover:border-primary-accent/20 hover:bg-primary-accent/[0.04] transition-all duration-300">
-                    <div className="text-2xl mb-3">⚡</div>
-                    <div className="text-2xl font-black font-mono tracking-tight text-text-primary/90">
+                {/* Processing Time Card */}
+                <div
+                    className={`stats-card stats-card--accent ${visible ? 'stats-card--visible' : ''}`}
+                    style={{ transitionDelay: `${STAT_CONFIG.length * 80}ms` }}
+                >
+                    <div className="stats-card__value stats-card__value--accent">
                         {summary.processing_time_seconds}s
                     </div>
-                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500 mt-1.5">
-                        Processing Time
-                    </div>
+                    <div className="stats-card__label">Processing Time</div>
                 </div>
             </div>
         </section>

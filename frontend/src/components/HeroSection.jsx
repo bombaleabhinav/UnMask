@@ -147,6 +147,28 @@ export default function HeroSection({ onFileUpload, loading, progress, error }) 
                     )}
                 </div>
             </div>
+
+            {/* Footer */}
+            <div className="absolute bottom-6 left-0 right-0 z-10 text-center animate-fade-in-up" style={{ animationDelay: '600ms' }}>
+                <p style={{ fontSize: '0.75rem', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>
+                    a project by{' '}
+                    <a
+                        href="https://github.com/bombaleabhinav/UnMask"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            color: 'var(--primary-accent)',
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                            transition: 'opacity 0.2s ease',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
+                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                    >
+                        camelCase
+                    </a>
+                </p>
+            </div>
         </section>
     );
 }

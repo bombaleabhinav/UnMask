@@ -23,10 +23,10 @@ function ScoreBar({ score }) {
     const glowIntensity = Math.min(score / 100, 1);
 
     return (
-        <div ref={ref} className="flex items-center gap-3">
-            <div className="w-16 h-1.5 rounded-full bg-white/5 overflow-hidden flex-shrink-0">
+        <div ref={ref} className="risk-bar">
+            <div className="risk-bar__track">
                 <div
-                    className="h-full rounded-full transition-all duration-1000 ease-out"
+                    className="risk-bar__fill"
                     style={{
                         width: `${width}%`,
                         background: 'linear-gradient(90deg, var(--success), var(--primary-accent), var(--danger))',
@@ -35,7 +35,7 @@ function ScoreBar({ score }) {
                 />
             </div>
             <span
-                className="text-xs font-mono font-bold tabular-nums"
+                className="risk-bar__value"
                 style={{ color: score >= 70 ? 'var(--danger)' : score >= 40 ? 'var(--primary-accent)' : 'var(--success)' }}
             >
                 {score.toFixed(1)}
@@ -46,73 +46,62 @@ function ScoreBar({ score }) {
 
 export default function AccountsTable({ accounts }) {
     const [page, setPage] = useState(1);
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setVisible(true), 100);
+        return () => clearTimeout(timer);
+    }, []);
 
     const totalPages = Math.ceil(accounts.length / ITEMS_PER_PAGE) || 1;
     const startIdx = (page - 1) * ITEMS_PER_PAGE;
     const pageData = accounts.slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
     return (
-        <section>
-            <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
-                <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                    <span className="text-danger">🚨</span> Suspicious Accounts
+        <section className={`accounts-section ${visible ? 'accounts-section--visible' : ''}`}>
+            <div className="accounts__header">
+                <h2 className="accounts__title">
+                    Suspicious Accounts
                 </h2>
-                <span className="text-xs font-mono text-neutral-600 tracking-wide">
+                <span className="accounts__count">
                     {accounts.length} FLAGGED
                 </span>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-primary-accent/10 bg-bg-primary">
-                <table className="w-full text-sm">
+            <div className="accounts__table-wrap">
+                <table className="accounts__table">
                     <thead>
-                        <tr className="border-b border-primary-accent/10">
+                        <tr>
                             {['ACCOUNT ID', 'SUSPICION SCORE', 'DETECTED PATTERNS', 'RING ID'].map((col) => (
-                                <th
-                                    key={col}
-                                    className="px-5 py-4 text-left text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-600 whitespace-nowrap"
-                                >
-                                    {col}
-                                </th>
+                                <th key={col} className="accounts__th">{col}</th>
                             ))}
                         </tr>
                     </thead>
                     <tbody>
                         {pageData.length === 0 ? (
                             <tr>
-                                <td colSpan={4} className="text-center py-16 text-neutral-600 text-sm">
+                                <td colSpan={4} className="accounts__empty">
                                     No suspicious accounts detected.
                                 </td>
                             </tr>
                         ) : (
                             pageData.map((account) => (
-                                <tr
-                                    key={account.account_id}
-                                    className="border-b border-divider transition-all duration-200 hover:bg-danger/[0.02]"
-                                >
-                                    <td className="px-5 py-4">
-                                        <span className="font-mono font-bold text-sm text-danger/80">
-                                            {account.account_id}
-                                        </span>
+                                <tr key={account.account_id} className="accounts__row">
+                                    <td className="accounts__td">
+                                        <span className="accounts__account-id">{account.account_id}</span>
                                     </td>
-                                    <td className="px-5 py-4">
+                                    <td className="accounts__td">
                                         <ScoreBar score={account.suspicion_score} />
                                     </td>
-                                    <td className="px-5 py-4">
-                                        <div className="flex flex-wrap gap-1.5">
+                                    <td className="accounts__td">
+                                        <div className="accounts__patterns">
                                             {account.detected_patterns.map((p, i) => (
-                                                <span
-                                                    key={i}
-                                                    className="px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold uppercase tracking-wide border border-danger/10 bg-danger/[0.04] text-danger/50"
-                                                >
-                                                    {p}
-                                                </span>
+                                                <span key={i} className="accounts__pattern-tag">{p}</span>
                                             ))}
                                         </div>
                                     </td>
-                                    <td className="px-5 py-4">
-                                        <span className="font-mono font-bold text-sm text-danger/60">
-                                            {account.ring_id || '—'}
-                                        </span>
+                                    <td className="accounts__td">
+                                        <span className="accounts__ring-id">{account.ring_id || '—'}</span>
                                     </td>
                                 </tr>
                             ))
@@ -122,21 +111,19 @@ export default function AccountsTable({ accounts }) {
             </div>
 
             {accounts.length > ITEMS_PER_PAGE && (
-                <div className="flex justify-center items-center gap-6 pt-6">
+                <div className="accounts__pagination">
                     <button
                         disabled={page <= 1}
                         onClick={() => setPage(page - 1)}
-                        className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 border border-primary-accent/10 rounded-lg hover:text-primary-accent hover:border-primary-accent/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
+                        className="accounts__page-btn"
                     >
                         ← Prev
                     </button>
-                    <span className="font-mono text-xs text-neutral-600">
-                        {page} / {totalPages}
-                    </span>
+                    <span className="accounts__page-info">{page} / {totalPages}</span>
                     <button
                         disabled={page >= totalPages}
                         onClick={() => setPage(page + 1)}
-                        className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 border border-primary-accent/10 rounded-lg hover:text-primary-accent hover:border-primary-accent/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
+                        className="accounts__page-btn"
                     >
                         Next →
                     </button>

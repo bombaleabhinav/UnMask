@@ -1,115 +1,38 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import cytoscape from 'cytoscape';
 
 /* ── Helpers ── */
 function formatNumber(num) {
     if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
     if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
-    return num.toFixed(2);
+    return Number(num).toFixed(2);
 }
 
-/* ── Transaction Particle Overlay ── */
-function ParticleOverlay({ cyRef, containerRef }) {
-    const canvasRef = useRef(null);
-    const particlesRef = useRef([]);
-    const animRef = useRef(null);
+/* ── Color constants matching CSS variables ── */
+const COLORS = {
+    bgPrimary: '#000000',
+    cardGlass: 'rgba(255, 255, 255, 0.06)',
+    primaryAccent: '#E5D9B6',
+    secondaryAccent: '#A78BFA',
+    danger: '#FB7185',
+    success: '#4ADE80',
+    textPrimary: '#F8FAFC',
+    textSecondary: '#94a3b8',
+    divider: 'rgba(255, 255, 255, 0.08)',
+};
 
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        const cy = cyRef.current;
-        const container = containerRef.current;
-        if (!canvas || !cy || !container) return;
-
-        const ctx = canvas.getContext('2d');
-
-        const resize = () => {
-            const rect = container.getBoundingClientRect();
-            canvas.width = rect.width;
-            canvas.height = rect.height;
-        };
-        resize();
-        window.addEventListener('resize', resize);
-
-        // Spawn particles along edges
-        const spawnParticles = () => {
-            const particles = [];
-            const edges = cy.edges();
-            edges.forEach((edge) => {
-                const src = edge.source().renderedPosition();
-                const tgt = edge.target().renderedPosition();
-                if (!src || !tgt) return;
-
-                const weight = edge.data('weight') || 1;
-                const speed = 0.003 + (weight / 10) * 0.004; // weight-based speed
-                const count = Math.min(Math.ceil(weight), 3); // more particles for heavier edges
-
-                for (let i = 0; i < count; i++) {
-                    particles.push({
-                        edge,
-                        t: Math.random(), // position along edge [0-1]
-                        speed,
-                        size: 1.5 + Math.random(),
-                    });
-                }
-            });
-            particlesRef.current = particles;
-        };
-
-        // Initial spawn + re-spawn on layout
-        spawnParticles();
-        cy.on('layoutstop', spawnParticles);
-
-        const draw = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const particles = particlesRef.current;
-
-            for (const p of particles) {
-                try {
-                    const src = p.edge.source().renderedPosition();
-                    const tgt = p.edge.target().renderedPosition();
-                    if (!src || !tgt) continue;
-
-                    p.t += p.speed;
-                    if (p.t > 1) p.t = 0;
-
-                    const x = src.x + (tgt.x - src.x) * p.t;
-                    const y = src.y + (tgt.y - src.y) * p.t;
-
-                    // Glow
-                    ctx.beginPath();
-                    ctx.arc(x, y, p.size * 3, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(56, 189, 248, 0.15)'; // Primary Accent Glow
-                    ctx.fill();
-
-                    // Core
-                    ctx.beginPath();
-                    ctx.arc(x, y, p.size, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(56, 189, 248, 0.7)'; // Primary Accent Core
-                    ctx.fill();
-                } catch {
-                    // Edge may have been removed
-                }
-            }
-
-            animRef.current = requestAnimationFrame(draw);
-        };
-        draw();
-
-        return () => {
-            cancelAnimationFrame(animRef.current);
-            window.removeEventListener('resize', resize);
-            cy.off('layoutstop', spawnParticles);
-        };
-    }, [cyRef, containerRef]);
-
-    return (
-        <canvas
-            ref={canvasRef}
-            className="absolute inset-0 pointer-events-none"
-            style={{ zIndex: 5 }}
-        />
-    );
-}
+const RING_PALETTE = [
+    '#A78BFA', // Purple
+    '#FB7185', // Rose
+    '#38BDF8', // Sky
+    '#818CF8', // Indigo
+    '#F472B6', // Pink
+    '#22D3EE', // Cyan
+    '#C084FC', // Violet
+    '#60A5FA', // Blue
+    '#34D399', // Emerald
+    '#FBBF24', // Amber
+];
 
 /* ── Main NetworkGraph ── */
 export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
@@ -119,8 +42,9 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
     const tooltipRef = useRef(null);
     const [showLabels, setShowLabels] = useState(true);
     const [cyReady, setCyReady] = useState(false);
+    const [activeFilter, setActiveFilter] = useState('all'); // all | suspicious | rings
 
-    // Resize observer for proper graph scaling
+    // Resize observer
     useEffect(() => {
         const cy = cyRef.current;
         const container = containerRef.current;
@@ -128,7 +52,7 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
 
         const observer = new ResizeObserver(() => {
             cy.resize();
-            cy.fit(undefined, 40);
+            cy.fit(undefined, 50);
         });
         observer.observe(container);
         return () => observer.disconnect();
@@ -137,21 +61,10 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
     useEffect(() => {
         if (!containerRef.current || !graphData) return;
 
-        // Cool-themed ring colors (Ice Blue, Purple, Pink, Violet, Cyan)
+        // Ring color mapping
         const ringColors = {};
-        const COOL_PALETTE = [
-            '#38BDF8', // Primary Accent
-            '#A78BFA', // Secondary Accent
-            '#FB7185', // Danger
-            '#818CF8', // Indigo 400
-            '#22D3EE', // Cyan 400
-            '#F472B6', // Pink 400
-            '#C084FC', // Purple 400
-            '#60A5FA', // Blue 400
-            '#34D399', // Emerald 400 (Success variant)
-        ];
         fraudRings.forEach((ring, i) => {
-            ringColors[ring.ring_id] = COOL_PALETTE[i % COOL_PALETTE.length];
+            ringColors[ring.ring_id] = RING_PALETTE[i % RING_PALETTE.length];
         });
 
         // Build elements
@@ -173,7 +86,7 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
                     ringId: node.ringId,
                     patterns: node.patterns,
                     sizeVal: node.sizeVal,
-                    ringColor: node.ringId ? (ringColors[node.ringId] || '#A78BFA') : null,
+                    ringColor: node.ringId ? (ringColors[node.ringId] || COLORS.secondaryAccent) : null,
                 },
             });
         }
@@ -199,123 +112,127 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
             container: containerRef.current,
             elements,
             style: [
-                // Normal nodes — subtle dark slate/blue
+                // ─── Normal Nodes ───
                 {
                     selector: 'node[type="normal"]',
                     style: {
-                        'background-color': '#0f172a', // Slate 900
+                        'background-color': '#1a1a2e',
+                        'background-opacity': 0.9,
                         'border-width': 1.5,
-                        'border-color': '#334155', // Slate 700
-                        'shadow-blur': 12,
-                        'shadow-color': '#38BDF8', // Primary Accent
-                        'shadow-opacity': 0.15,
+                        'border-color': 'rgba(229, 217, 182, 0.2)',
+                        'shadow-blur': 8,
+                        'shadow-color': 'rgba(229, 217, 182, 0.1)',
+                        'shadow-opacity': 0.3,
                         'label': showLabels ? 'data(label)' : '',
-                        'font-size': '9px',
+                        'font-size': '8px',
                         'font-family': 'Inter, sans-serif',
-                        'color': '#94a3b8', // Text Secondary
+                        'font-weight': '500',
+                        'color': COLORS.textSecondary,
                         'text-valign': 'bottom',
                         'text-margin-y': 6,
                         'width': 'data(sizeVal)',
                         'height': 'data(sizeVal)',
-                        'opacity': 0.8,
+                        'opacity': 0.7,
                         'text-outline-width': 2,
-                        'text-outline-color': '#020617', // Bg Primary
-                        'transition-property': 'width, height, shadow-blur, opacity',
-                        'transition-duration': '0.2s',
+                        'text-outline-color': '#000000',
+                        'transition-property': 'width, height, shadow-blur, opacity, border-color, border-width',
+                        'transition-duration': '0.25s',
                     },
                 },
-                // Suspicious nodes — Danger (Rose)
+                // ─── Suspicious Nodes ───
                 {
                     selector: 'node[type="suspicious"]',
                     style: {
-                        'background-color': '#FB7185', // Danger
+                        'background-color': COLORS.danger,
+                        'background-opacity': 0.85,
                         'border-width': 2.5,
-                        'border-color': '#FDA4AF', // Rose 300
-                        'shadow-blur': 25,
-                        'shadow-color': '#FB7185',
-                        'shadow-opacity': 0.6,
+                        'border-color': '#FDA4AF',
+                        'shadow-blur': 20,
+                        'shadow-color': COLORS.danger,
+                        'shadow-opacity': 0.5,
                         'label': 'data(label)',
-                        'font-size': '10px',
+                        'font-size': '9px',
                         'font-family': 'Inter, sans-serif',
                         'font-weight': 'bold',
                         'color': '#FDA4AF',
                         'text-valign': 'bottom',
-                        'text-margin-y': 6,
+                        'text-margin-y': 7,
                         'width': 'data(sizeVal)',
                         'height': 'data(sizeVal)',
                         'opacity': 1,
                         'text-outline-width': 2,
-                        'text-outline-color': '#020617',
-                        'transition-property': 'width, height, shadow-blur, opacity',
-                        'transition-duration': '0.2s',
+                        'text-outline-color': '#000000',
+                        'transition-property': 'width, height, shadow-blur, opacity, border-color, border-width',
+                        'transition-duration': '0.25s',
                     },
                 },
-                // Ring nodes — intense glow with double border
+                // ─── Ring Nodes ───
                 {
                     selector: 'node[type="ring"]',
                     style: {
                         'background-color': 'data(ringColor)',
+                        'background-opacity': 0.9,
                         'border-width': 3,
-                        'border-color': '#fff',
+                        'border-color': '#ffffff',
                         'border-style': 'double',
-                        'shadow-blur': 30,
+                        'shadow-blur': 28,
                         'shadow-color': 'data(ringColor)',
-                        'shadow-opacity': 0.8,
+                        'shadow-opacity': 0.7,
                         'label': 'data(label)',
-                        'font-size': '11px',
+                        'font-size': '10px',
                         'font-family': 'Inter, sans-serif',
                         'font-weight': 'bold',
-                        'color': '#f8fafc', // Text Primary
+                        'color': COLORS.textPrimary,
                         'text-valign': 'bottom',
                         'text-margin-y': 8,
                         'width': 'mapData(sizeVal, 20, 50, 30, 60)',
                         'height': 'mapData(sizeVal, 20, 50, 30, 60)',
                         'opacity': 1,
-                        'text-outline-width': 2,
-                        'text-outline-color': '#020617',
-                        'transition-property': 'width, height, shadow-blur, opacity',
-                        'transition-duration': '0.2s',
+                        'text-outline-width': 2.5,
+                        'text-outline-color': '#000000',
+                        'transition-property': 'width, height, shadow-blur, opacity, border-color, border-width',
+                        'transition-duration': '0.25s',
                     },
                 },
-                // Normal edges — thin slate/blue
+                // ─── Safe Edges (Green) ───
                 {
                     selector: 'edge[!suspicious]',
                     style: {
                         'width': 'data(weight)',
-                        'line-color': 'rgba(148, 163, 184, 0.15)', // Slate 400 low opacity
-                        'target-arrow-color': 'rgba(148, 163, 184, 0.25)',
+                        'line-color': 'rgba(74, 222, 128, 0.2)',
+                        'target-arrow-color': 'rgba(74, 222, 128, 0.35)',
                         'target-arrow-shape': 'triangle',
                         'curve-style': 'bezier',
-                        'arrow-scale': 0.8,
-                        'opacity': 0.4,
+                        'arrow-scale': 0.7,
+                        'opacity': 0.35,
                         'transition-property': 'opacity, line-color',
                         'transition-duration': '0.3s',
                     },
                 },
-                // Suspicious edges — Danger
+                // ─── Suspicious Edges (Red gradient) ───
                 {
                     selector: 'edge[suspicious]',
                     style: {
                         'width': 'data(weight)',
-                        'line-color': '#FB7185', // Danger
-                        'target-arrow-color': '#FB7185',
+                        'line-color': COLORS.danger,
+                        'target-arrow-color': COLORS.danger,
                         'target-arrow-shape': 'triangle',
                         'curve-style': 'bezier',
-                        'arrow-scale': 1,
-                        'opacity': 0.75,
+                        'arrow-scale': 0.9,
+                        'opacity': 0.7,
                         'transition-property': 'opacity, line-color',
                         'transition-duration': '0.3s',
                     },
                 },
-                // Hover state — enlarge + intensified glow
+                // ─── Hover / Selected State ───
                 {
                     selector: 'node:active, node:selected',
                     style: {
-                        'border-color': '#38BDF8', // Primary Accent
+                        'border-color': COLORS.primaryAccent,
                         'border-width': 4,
                         'shadow-blur': 40,
-                        'shadow-color': '#38BDF8',
-                        'shadow-opacity': 0.9,
+                        'shadow-color': COLORS.primaryAccent,
+                        'shadow-opacity': 0.8,
                         'width': 'mapData(sizeVal, 20, 50, 40, 70)',
                         'height': 'mapData(sizeVal, 20, 50, 40, 70)',
                     },
@@ -324,21 +241,21 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
             layout: {
                 name: isLarge ? 'grid' : 'cose',
                 animate: !isLarge,
-                animationDuration: 1000,
-                nodeRepulsion: () => 8000,
-                idealEdgeLength: () => 120,
+                animationDuration: 1200,
+                nodeRepulsion: () => 9000,
+                idealEdgeLength: () => 130,
                 edgeElasticity: () => 80,
-                gravity: 0.3,
+                gravity: 0.25,
                 numIter: isLarge ? 0 : 1000,
                 randomize: true,
-                padding: 40,
+                padding: 50,
             },
-            minZoom: 0.1,
-            maxZoom: 5,
-            wheelSensitivity: 0.3,
+            minZoom: 0.08,
+            maxZoom: 6,
+            wheelSensitivity: 0.25,
         });
 
-        // Tooltip events
+        // ─── Tooltip Events ───
         cy.on('mouseover', 'node', (event) => {
             const node = event.target;
             const data = node.data();
@@ -348,41 +265,44 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
 
             // Enlarge on hover
             node.style({
-                'shadow-blur': 40,
-                'shadow-opacity': 0.9,
+                'shadow-blur': 45,
+                'shadow-opacity': 0.95,
             });
 
+            const typeClass = data.type === 'ring' ? 'danger' : data.type === 'suspicious' ? 'suspicious' : '';
+            const typeLabel = data.type === 'ring' ? '⚠ Fraud Ring' : data.type === 'suspicious' ? '⚡ Suspicious' : '● Normal';
+
             tooltip.innerHTML = `
-        <div class="tooltip-header">
-          <span class="tooltip-account">${data.id}</span>
-          <span class="tooltip-badge ${data.type === 'ring' ? 'danger' : data.type === 'suspicious' ? 'suspicious' : ''}">
-            ${data.type === 'ring' ? 'Fraud Ring' : data.type === 'suspicious' ? 'Suspicious' : 'Normal'}
-          </span>
-        </div>
-        <div class="tooltip-body">
-          <div class="tooltip-row"><span>Score</span><span>${data.score.toFixed(1)}</span></div>
-          <div class="tooltip-row"><span>In-Degree</span><span>${data.inDeg}</span></div>
-          <div class="tooltip-row"><span>Out-Degree</span><span>${data.outDeg}</span></div>
-          <div class="tooltip-row"><span>Received</span><span>$${formatNumber(data.totalIn)}</span></div>
-          <div class="tooltip-row"><span>Sent</span><span>$${formatNumber(data.totalOut)}</span></div>
-          <div class="tooltip-row"><span>Patterns</span><span>${data.patterns?.length ? data.patterns.join(', ') : 'None'}</span></div>
-          <div class="tooltip-row"><span>Ring</span><span>${data.ringId || '—'}</span></div>
-        </div>
-      `;
+                <div class="tooltip-header">
+                    <span class="tooltip-account">${data.id}</span>
+                    <span class="tooltip-badge ${typeClass}">${typeLabel}</span>
+                </div>
+                <div class="tooltip-body">
+                    <div class="tooltip-row"><span>Score</span><span>${data.score.toFixed(1)}</span></div>
+                    <div class="tooltip-row"><span>In-Degree</span><span>${data.inDeg}</span></div>
+                    <div class="tooltip-row"><span>Out-Degree</span><span>${data.outDeg}</span></div>
+                    <div class="tooltip-row"><span>Received</span><span>$${formatNumber(data.totalIn)}</span></div>
+                    <div class="tooltip-row"><span>Sent</span><span>$${formatNumber(data.totalOut)}</span></div>
+                    <div class="tooltip-row"><span>Transactions</span><span>${data.txCount}</span></div>
+                    <div class="tooltip-row"><span>Patterns</span><span>${data.patterns?.length ? data.patterns.join(', ') : 'None'}</span></div>
+                    <div class="tooltip-row"><span>Ring</span><span>${data.ringId || '—'}</span></div>
+                </div>
+            `;
 
             const rect = containerRef.current.getBoundingClientRect();
             let left = rect.left + pos.x + 20;
             let top = rect.top + pos.y - 20;
-            if (left + 300 > window.innerWidth) left = rect.left + pos.x - 300;
-            if (top + 250 > window.innerHeight) top = window.innerHeight - 260;
+            if (left + 310 > window.innerWidth) left = rect.left + pos.x - 310;
+            if (top + 280 > window.innerHeight) top = window.innerHeight - 290;
             if (top < 10) top = 10;
 
             tooltip.style.left = `${left}px`;
             tooltip.style.top = `${top}px`;
             tooltip.style.display = 'block';
 
+            // Dim non-neighbors
             const neighborhood = node.neighborhood().add(node);
-            cy.elements().not(neighborhood).style('opacity', 0.1);
+            cy.elements().not(neighborhood).style('opacity', 0.08);
             neighborhood.style('opacity', 1);
         });
 
@@ -394,8 +314,9 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
 
         cy.on('tap', 'node', (event) => {
             const data = event.target.data();
-            // Open intel panel
             if (onNodeSelect) onNodeSelect(data);
+
+            // Highlight ring on tap
             if (data.ringId) {
                 const ringMembers = cy.nodes().filter((n) => n.data('ringId') === data.ringId);
                 cy.elements().style('opacity', 0.05);
@@ -419,6 +340,28 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [graphData, fraudRings, showLabels]);
 
+    // ── Filter logic ──
+    useEffect(() => {
+        const cy = cyRef.current;
+        if (!cy) return;
+
+        if (activeFilter === 'all') {
+            cy.elements().style('opacity', '');
+        } else if (activeFilter === 'suspicious') {
+            cy.nodes().style('opacity', 0.08);
+            cy.edges().style('opacity', 0.05);
+            const suspicious = cy.nodes().filter(n => n.data('type') === 'suspicious' || n.data('type') === 'ring');
+            suspicious.style('opacity', 1);
+            suspicious.connectedEdges().style('opacity', 0.8);
+        } else if (activeFilter === 'rings') {
+            cy.nodes().style('opacity', 0.08);
+            cy.edges().style('opacity', 0.05);
+            const ringNodes = cy.nodes().filter(n => n.data('type') === 'ring');
+            ringNodes.style('opacity', 1);
+            ringNodes.connectedEdges().style('opacity', 0.8);
+        }
+    }, [activeFilter, cyReady]);
+
     const zoomIn = () => {
         const cy = cyRef.current;
         if (cy) cy.zoom({ level: cy.zoom() * 1.3, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
@@ -428,66 +371,91 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
         if (cy) cy.zoom({ level: cy.zoom() * 0.7, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
     };
     const fitView = () => {
-        if (cyRef.current) cyRef.current.fit(undefined, 40);
+        if (cyRef.current) cyRef.current.fit(undefined, 50);
     };
     const toggleLabels = () => setShowLabels((v) => !v);
 
     return (
-        <>
-            {/* Controls */}
-            <div className="flex gap-2 mb-3">
-                <button onClick={zoomIn} title="Zoom In" className="w-9 h-9 flex items-center justify-center rounded-lg border border-primary-accent/15 bg-bg-primary/60 text-neutral-500 hover:text-primary-accent hover:border-primary-accent/40 transition-colors duration-200 text-lg cursor-pointer">+</button>
-                <button onClick={zoomOut} title="Zoom Out" className="w-9 h-9 flex items-center justify-center rounded-lg border border-primary-accent/15 bg-bg-primary/60 text-neutral-500 hover:text-primary-accent hover:border-primary-accent/40 transition-colors duration-200 text-lg cursor-pointer">−</button>
-                <button onClick={fitView} title="Fit" className="w-9 h-9 flex items-center justify-center rounded-lg border border-primary-accent/15 bg-bg-primary/60 text-neutral-500 hover:text-primary-accent hover:border-primary-accent/40 transition-colors duration-200 text-lg cursor-pointer">⊞</button>
-                <button onClick={toggleLabels} title="Toggle Labels" className="w-9 h-9 flex items-center justify-center rounded-lg border border-primary-accent/15 bg-bg-primary/60 text-neutral-500 hover:text-primary-accent hover:border-primary-accent/40 transition-colors duration-200 text-sm font-semibold cursor-pointer">Aa</button>
+        <div className="network-graph-wrapper">
+            {/* Controls Bar */}
+            <div className="graph-controls-bar">
+                <div className="graph-controls-group">
+                    <button onClick={zoomIn} title="Zoom In" className="graph-ctrl-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                    </button>
+                    <button onClick={zoomOut} title="Zoom Out" className="graph-ctrl-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                    </button>
+                    <button onClick={fitView} title="Fit View" className="graph-ctrl-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg>
+                    </button>
+                    <button onClick={toggleLabels} title="Toggle Labels" className="graph-ctrl-btn graph-ctrl-btn--text">
+                        Aa
+                    </button>
+                </div>
+
+                {/* Filter pills */}
+                <div className="graph-filter-pills">
+                    {[
+                        { key: 'all', label: 'All Nodes' },
+                        { key: 'suspicious', label: 'Suspicious' },
+                        { key: 'rings', label: 'Rings Only' },
+                    ].map(f => (
+                        <button
+                            key={f.key}
+                            className={`graph-filter-pill ${activeFilter === f.key ? 'graph-filter-pill--active' : ''}`}
+                            onClick={() => setActiveFilter(f.key)}
+                        >
+                            {f.label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            {/* Graph container */}
-            <div
-                ref={wrapperRef}
-                className="relative rounded-xl border border-primary-accent/10 overflow-hidden bg-bg-primary"
-            >
+            {/* Graph Container */}
+            <div ref={wrapperRef} className="graph-canvas-wrapper">
                 <div
                     ref={containerRef}
-                    className="w-full"
-                    style={{ height: 'clamp(400px, 50vw, 600px)' }}
+                    className="graph-canvas"
                 />
 
-                {/* Particle overlay */}
-                {cyReady && <ParticleOverlay cyRef={cyRef} containerRef={containerRef} />}
-
                 {/* Legend */}
-                <div className="absolute bottom-4 left-4 bg-bg-primary/90 border border-primary-accent/10 rounded-xl px-5 py-4 z-10">
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-600 mb-3">Legend</div>
-                    <div className="flex flex-col gap-1.5 text-xs text-neutral-500">
-                        <div className="flex items-center gap-2.5">
-                            <span className="w-3 h-3 rounded-full bg-[#334155] shadow-[0_0_6px_#334155]" /> Safe
+                <div className="graph-legend">
+                    <div className="graph-legend__title">Legend</div>
+                    <div className="graph-legend__items">
+                        <div className="graph-legend__item">
+                            <span className="graph-legend__dot graph-legend__dot--normal" />
+                            <span>Normal</span>
                         </div>
-                        <div className="flex items-center gap-2.5">
-                            <span className="w-3 h-3 rounded-full bg-danger shadow-[0_0_10px_#FB7185]" /> Suspicious
+                        <div className="graph-legend__item">
+                            <span className="graph-legend__dot graph-legend__dot--suspicious" />
+                            <span>Suspicious</span>
                         </div>
-                        <div className="flex items-center gap-2.5">
-                            <span className="w-3 h-3 rounded-full bg-secondary-accent border border-white shadow-[0_0_12px_#A78BFA]" /> Ring Member
+                        <div className="graph-legend__item">
+                            <span className="graph-legend__dot graph-legend__dot--ring" />
+                            <span>Ring Member</span>
                         </div>
-                        <div className="flex items-center gap-2.5 mt-1">
-                            <span className="w-6 h-px bg-slate-600/50" /> Normal Flow
+                        <div className="graph-legend__item graph-legend__item--edge">
+                            <span className="graph-legend__line graph-legend__line--safe" />
+                            <span>Safe Flow</span>
                         </div>
-                        <div className="flex items-center gap-2.5">
-                            <span className="w-6 h-px bg-danger shadow-[0_0_4px_#FB7185]" /> Suspicious Flow
+                        <div className="graph-legend__item graph-legend__item--edge">
+                            <span className="graph-legend__line graph-legend__line--danger" />
+                            <span>Suspicious Flow</span>
                         </div>
                     </div>
                 </div>
 
-                {/* Filtered notice */}
+                {/* Node count notice */}
                 {graphData.isFiltered && (
-                    <div className="absolute bottom-5 right-5 bg-bg-primary/90 text-neutral-600 px-4 py-2.5 rounded-lg border border-primary-accent/10 text-xs z-10">
-                        Rendering {graphData.renderedNodes} nodes (of {graphData.totalNodes})
+                    <div className="graph-node-count">
+                        Rendering {graphData.renderedNodes} of {graphData.totalNodes} nodes
                     </div>
                 )}
             </div>
 
             {/* Tooltip */}
             <div className="node-tooltip" ref={tooltipRef} style={{ display: 'none' }} />
-        </>
+        </div>
     );
 }

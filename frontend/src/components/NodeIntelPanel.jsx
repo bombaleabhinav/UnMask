@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
 
+function formatNum(num) {
+    if (!num && num !== 0) return '—';
+    if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+    if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+    return Number(num).toFixed(2);
+}
+
 export default function NodeIntelPanel({ node, onClose }) {
     const [visible, setVisible] = useState(false);
     const [meterWidth, setMeterWidth] = useState(0);
 
-    // Animate in when node changes
     useEffect(() => {
         if (node) {
             requestAnimationFrame(() => setVisible(true));
-            // Animate meter after panel slides in
             const timer = setTimeout(() => setMeterWidth(node.score || 0), 300);
             return () => clearTimeout(timer);
         } else {
@@ -32,89 +37,60 @@ export default function NodeIntelPanel({ node, onClose }) {
         <>
             {/* Backdrop */}
             <div
-                className="fixed inset-0 z-40 bg-black/40 transition-opacity duration-300"
+                className="intel-backdrop"
                 style={{ opacity: visible ? 1 : 0, pointerEvents: visible ? 'auto' : 'none' }}
                 onClick={handleClose}
             />
 
             {/* Panel */}
             <div
-                className="fixed top-0 right-0 z-50 h-full w-[380px] max-w-[90vw] flex flex-col transition-transform duration-300 ease-out"
-                style={{
-                    transform: visible ? 'translateX(0)' : 'translateX(100%)',
-                    background: 'rgba(2, 6, 23, 0.85)', // Dark background
-                    borderLeft: '2px solid var(--primary-accent)', // Blue border
-                    backdropFilter: 'blur(24px)',
-                    WebkitBackdropFilter: 'blur(24px)',
-                }}
+                className="intel-panel"
+                style={{ transform: visible ? 'translateX(0)' : 'translateX(100%)' }}
             >
                 {/* Close button */}
-                <div className="flex justify-end p-4">
-                    <button
-                        onClick={handleClose}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-500 hover:text-primary-accent hover:bg-primary-accent/10 transition-all duration-200 cursor-pointer text-lg"
-                    >
-                        ✕
-                    </button>
+                <div className="intel-panel__close-row">
+                    <button onClick={handleClose} className="intel-panel__close-btn">✕</button>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto px-6 pb-8 space-y-8">
+                <div className="intel-panel__body">
 
-                    {/* Header — Account ID */}
-                    <div>
-                        <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-600 mb-2">
-                            Account Intelligence
-                        </div>
-                        <h3
-                            className="text-2xl font-black font-mono tracking-tight break-all text-primary-accent"
-                        >
-                            {node.id}
-                        </h3>
-                        <div className="mt-2">
-                            <span
-                                className={`
-                  inline-block text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border
-                  ${node.type === 'ring'
-                                        ? 'text-secondary-accent border-secondary-accent/30 bg-secondary-accent/10'
-                                        : node.type === 'suspicious'
-                                            ? 'text-danger border-danger/30 bg-danger/10'
-                                            : 'text-text-secondary border-text-secondary/30 bg-text-secondary/10'
-                                    }
-                `}
-                            >
+                    {/* Header */}
+                    <div className="intel-panel__section">
+                        <div className="intel-panel__section-label">Account Intelligence</div>
+                        <h3 className="intel-panel__account-id">{node.id}</h3>
+                        <div className="intel-panel__badge-row">
+                            <span className={`intel-panel__badge intel-panel__badge--${node.type}`}>
                                 {node.type === 'ring' ? '⚠ FRAUD RING' : node.type === 'suspicious' ? '⚡ SUSPICIOUS' : '● NORMAL'}
                             </span>
                         </div>
                     </div>
 
                     {/* Suspicion Meter */}
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-600">
-                                Suspicion Score
-                            </span>
+                    <div className="intel-panel__section">
+                        <div className="intel-panel__meter-header">
+                            <span className="intel-panel__section-label">Suspicion Score</span>
                             <span
-                                className="text-xl font-black font-mono"
-                                style={{ color: score >= 70 ? '#FF1A1A' : score >= 40 ? '#FF4444' : '#7A0000' }}
+                                className="intel-panel__score-value"
+                                style={{ color: score >= 70 ? 'var(--danger)' : score >= 40 ? 'var(--primary-accent)' : 'var(--success)' }}
                             >
                                 {score.toFixed(1)}
                             </span>
                         </div>
-                        <div className="w-full h-2.5 rounded-full bg-white/5 overflow-hidden">
+                        <div className="intel-panel__meter-track">
                             <div
-                                className="h-full rounded-full transition-all duration-700 ease-out"
+                                className="intel-panel__meter-fill"
                                 style={{
                                     width: `${meterWidth}%`,
-                                    background: `linear-gradient(90deg, var(--success), var(--primary-accent), var(--danger))`,
+                                    background: 'linear-gradient(90deg, var(--success), var(--primary-accent), var(--danger))',
                                     boxShadow: `0 0 ${12 + glowIntensity * 20}px rgba(251, 113, 133, ${0.2 + glowIntensity * 0.5})`,
                                 }}
                             />
                         </div>
                     </div>
 
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 gap-3">
+                    {/* Stats */}
+                    <div className="intel-panel__stats-grid">
                         {[
                             { label: 'In-Degree', value: node.inDeg },
                             { label: 'Out-Degree', value: node.outDeg },
@@ -122,60 +98,35 @@ export default function NodeIntelPanel({ node, onClose }) {
                             { label: 'Sent', value: `$${formatNum(node.totalOut)}` },
                             { label: 'Transactions', value: node.txCount },
                         ].map((item) => (
-                            <div
-                                key={item.label}
-                                className="px-3 py-3 rounded-lg border border-primary-accent/10 bg-primary-accent/[0.03]"
-                            >
-                                <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-600 mb-1">
-                                    {item.label}
-                                </div>
-                                <div className="text-sm font-bold font-mono text-white/80">
-                                    {item.value}
-                                </div>
+                            <div key={item.label} className="intel-panel__stat-card">
+                                <div className="intel-panel__stat-label">{item.label}</div>
+                                <div className="intel-panel__stat-value">{item.value}</div>
                             </div>
                         ))}
                     </div>
 
-                    {/* Detected Patterns */}
-                    <div>
-                        <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-600 mb-3">
-                            Detected Patterns
-                        </div>
-                        <div className="flex flex-wrap gap-2">
+                    {/* Patterns */}
+                    <div className="intel-panel__section">
+                        <div className="intel-panel__section-label">Detected Patterns</div>
+                        <div className="intel-panel__patterns">
                             {patterns.map((p, i) => (
-                                <span
-                                    key={i}
-                                    className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border border-danger/15 bg-danger/5 text-danger/70"
-                                >
-                                    {p}
-                                </span>
+                                <span key={i} className="intel-panel__pattern-tag">{p}</span>
                             ))}
                         </div>
                     </div>
 
-                    {/* Ring ID */}
-                    <div>
-                        <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-600 mb-2">
-                            Ring Association
-                        </div>
-                        <div className="text-base font-mono font-bold text-white/70">
-                            {node.ringId || (
-                                <span className="text-neutral-600 font-normal">No ring association</span>
-                            )}
+                    {/* Ring */}
+                    <div className="intel-panel__section">
+                        <div className="intel-panel__section-label">Ring Association</div>
+                        <div className="intel-panel__ring-value">
+                            {node.ringId || <span className="intel-panel__ring-none">No ring association</span>}
                         </div>
                     </div>
                 </div>
 
-                {/* Bottom accent line */}
-                <div className="h-px bg-gradient-to-r from-transparent via-primary-accent/30 to-transparent" />
+                {/* Bottom accent */}
+                <div className="intel-panel__accent-line" />
             </div>
         </>
     );
-}
-
-function formatNum(num) {
-    if (!num && num !== 0) return '—';
-    if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
-    if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
-    return num.toFixed(2);
 }
