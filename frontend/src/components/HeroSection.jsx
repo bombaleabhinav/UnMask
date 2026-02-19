@@ -119,18 +119,7 @@ function ScrollIndicator() {
 }
 
 /* ── Main HeroSection ── */
-export default function HeroSection({ onFileUpload, loading, progress, error }) {
-    const fileRef = useRef(null);
-    const [dragOver, setDragOver] = useState(false);
-
-    const handleDrop = (e) => {
-        e.preventDefault();
-        setDragOver(false);
-        if (e.dataTransfer.files.length > 0) {
-            onFileUpload(e.dataTransfer.files[0]);
-        }
-    };
-
+export default function HeroSection() {
     return (
         <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-black">
             {/* Animated nodes background */}
@@ -160,65 +149,9 @@ export default function HeroSection({ onFileUpload, loading, progress, error }) 
                 </h1>
 
                 {/* Subtitle */}
-                <p className="text-lg sm:text-xl md:text-2xl font-light tracking-wide text-white/70 mb-16">
+                <p className="text-lg sm:text-xl md:text-2xl font-light tracking-wide text-white/70">
                     Follow the money. Reveal the network.
                 </p>
-
-                {/* Upload zone */}
-                {!loading ? (
-                    <div
-                        className={`
-              mx-auto max-w-xl border border-dashed rounded-2xl p-12 cursor-pointer
-              transition-all duration-300 backdrop-blur-sm
-              ${dragOver
-                                ? 'border-[#FF1A1A] bg-[#FF1A1A]/5 scale-[1.02]'
-                                : 'border-[#FF1A1A]/20 bg-white/[0.02] hover:border-[#FF1A1A]/50 hover:bg-[#FF1A1A]/[0.03] hover:shadow-[0_0_60px_rgba(255,26,26,0.08)]'
-                            }
-            `}
-                        onClick={() => fileRef.current?.click()}
-                        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                        onDragLeave={() => setDragOver(false)}
-                        onDrop={handleDrop}
-                    >
-                        <div className="text-[#FF1A1A]/60 mb-5">
-                            <svg className="mx-auto" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                <path d="M12 16V4m0 0l-4 4m4-4l4 4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17" />
-                            </svg>
-                        </div>
-                        <p className="text-white/80 font-semibold text-base mb-1">Drop your transaction CSV here</p>
-                        <p className="text-white/40 text-sm mb-4">or click to browse</p>
-                        <code className="text-xs font-mono px-4 py-2 rounded-lg bg-[#FF1A1A]/5 border border-[#FF1A1A]/10 text-[#FF1A1A]/50">
-                            transaction_id, sender_id, receiver_id, amount, timestamp
-                        </code>
-                        <input
-                            type="file"
-                            ref={fileRef}
-                            accept=".csv"
-                            style={{ display: 'none' }}
-                            onChange={(e) => {
-                                if (e.target.files[0]) onFileUpload(e.target.files[0]);
-                            }}
-                        />
-                    </div>
-                ) : (
-                    <div className="mx-auto max-w-md">
-                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mb-3">
-                            <div
-                                className="h-full rounded-full transition-[width] duration-300"
-                                style={{
-                                    width: `${progress.percent}%`,
-                                    background: 'linear-gradient(90deg, #FF1A1A, #B00000)',
-                                    boxShadow: '0 0 20px rgba(255, 26, 26, 0.4)',
-                                }}
-                            />
-                        </div>
-                        <p className="text-white/50 text-sm font-medium">{progress.text}</p>
-                    </div>
-                )}
-
-                {error && (
-                    <p className="mt-6 text-[#FF1A1A] font-semibold text-sm">⚠ {error}</p>
-                )}
             </div>
 
             {/* Scroll indicator */}
@@ -240,3 +173,4 @@ export default function HeroSection({ onFileUpload, loading, progress, error }) 
         </section>
     );
 }
+

@@ -2,10 +2,13 @@ import { useState } from 'react';
 import './index.css';
 import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
-import GraphView from './components/GraphView';
+import UploadCommandCenter from './components/UploadCommandCenter';
+import NetworkGraph from './components/NetworkGraph';
 import StatsGrid from './components/StatsGrid';
-import RingsTable from './components/RingsTable';
+import FraudRingMatrix from './components/FraudRingMatrix';
 import AccountsTable from './components/AccountsTable';
+import NodeIntelPanel from './components/NodeIntelPanel';
+import ForensicLoader from './components/ForensicLoader';
 
 
 export default function App() {
@@ -19,6 +22,7 @@ export default function App() {
   const [progress, setProgress] = useState({ percent: 0, text: '' });
   const [error, setError] = useState(null);
   const [showConfig, setShowConfig] = useState(false);
+  const [selectedNode, setSelectedNode] = useState(null);
 
   // Update localStorage when URL changes
   const handleUrlChange = (newUrl) => {
@@ -108,64 +112,75 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-black text-white">
+      {/* ── Cinematic Loader ── */}
+      <ForensicLoader visible={loading} />
+
       {/* ── Sticky Navbar ── */}
       <Navbar hasResults={!!result} onNewAnalysis={handleNewAnalysis} />
 
       {!result ? (
         /* ── Hero / Upload View ── */
-        <section id="upload-section">
-          <HeroSection
-            onFileUpload={handleFileUpload}
-            loading={loading}
-            progress={progress}
-            error={error}
-          />
-        </section>
+        <>
+          <HeroSection />
+          <section id="upload-section">
+            <UploadCommandCenter
+              onFileUpload={handleFileUpload}
+              loading={loading}
+              progress={progress}
+              error={error}
+            />
+          </section>
+        </>
       ) : (
         /* ── Results View ── */
-        <main className="max-w-[1400px] mx-auto px-6 md:px-10">
+        <>
+          <main className="max-w-[1400px] mx-auto px-6 md:px-10">
 
-          {/* Stats Overview */}
-          <section className="pt-20 pb-10">
-            <StatsGrid summary={result.summary} />
-          </section>
+            {/* Stats Overview */}
+            <section className="pt-20 pb-10">
+              <StatsGrid summary={result.summary} />
+            </section>
 
-          {/* Network Graph */}
-          <section id="graph-section" className="py-20">
-            <div className="flex items-center justify-between mb-10 flex-wrap gap-4">
-              <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                <span className="text-[#FF1A1A]">🕸️</span> Network Graph
-              </h2>
+            {/* Network Graph */}
+            <section id="graph-section" className="py-20">
+              <div className="flex items-center justify-between mb-10 flex-wrap gap-4">
+                <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+                  <span className="text-[#FF1A1A]">🕸️</span> Network Graph
+                </h2>
+                <button
+                  onClick={handleDownload}
+                  className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-xl bg-gradient-to-r from-[#FF1A1A] to-[#B00000] text-black hover:scale-[1.03] transition-transform duration-200 cursor-pointer"
+                >
+                  ⬇ Download JSON Report
+                </button>
+              </div>
+              <NetworkGraph graphData={result.graph_data} fraudRings={result.fraud_rings} onNodeSelect={setSelectedNode} />
+            </section>
+
+            {/* Fraud Ring Table */}
+            <section id="rings-section" className="py-20">
+              <FraudRingMatrix rings={result.fraud_rings} />
+            </section>
+
+            {/* Suspicious Accounts Table */}
+            <section className="py-20">
+              <AccountsTable accounts={result.suspicious_accounts} />
+            </section>
+
+            {/* New Analysis CTA */}
+            <section className="text-center py-24 pb-32">
               <button
-                onClick={handleDownload}
-                className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-xl bg-gradient-to-r from-[#FF1A1A] to-[#B00000] text-black hover:scale-[1.03] transition-transform duration-200 cursor-pointer"
+                onClick={handleNewAnalysis}
+                className="inline-flex items-center gap-3 px-10 py-4 text-base font-semibold rounded-2xl border border-[#FF1A1A]/20 text-neutral-400 hover:text-[#FF1A1A] hover:border-[#FF1A1A]/40 hover:shadow-[0_0_40px_rgba(255,26,26,0.1)] transition-all duration-300 cursor-pointer"
               >
-                ⬇ Download JSON Report
+                🔄 Run New Analysis
               </button>
-            </div>
-            <GraphView graphData={result.graph_data} fraudRings={result.fraud_rings} />
-          </section>
+            </section>
+          </main>
 
-          {/* Fraud Ring Table */}
-          <section id="rings-section" className="py-20">
-            <RingsTable rings={result.fraud_rings} />
-          </section>
-
-          {/* Suspicious Accounts Table */}
-          <section className="py-20">
-            <AccountsTable accounts={result.suspicious_accounts} />
-          </section>
-
-          {/* New Analysis CTA */}
-          <section className="text-center py-24 pb-32">
-            <button
-              onClick={handleNewAnalysis}
-              className="inline-flex items-center gap-3 px-10 py-4 text-base font-semibold rounded-2xl border border-[#FF1A1A]/20 text-neutral-400 hover:text-[#FF1A1A] hover:border-[#FF1A1A]/40 hover:shadow-[0_0_40px_rgba(255,26,26,0.1)] transition-all duration-300 cursor-pointer"
-            >
-              🔄 Run New Analysis
-            </button>
-          </section>
-        </main>
+          {/* Node Intelligence Panel */}
+          <NodeIntelPanel node={selectedNode} onClose={() => setSelectedNode(null)} />
+        </>
       )}
 
       {/* ── Footer ── */}
