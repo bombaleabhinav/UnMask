@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import cytoscape from 'cytoscape';
 
 /* ── Helpers ── */
@@ -11,28 +11,140 @@ function formatNumber(num) {
 /* ── Color constants matching CSS variables ── */
 const COLORS = {
     bgPrimary: '#000000',
-    cardGlass: 'rgba(255, 255, 255, 0.06)',
     primaryAccent: '#E5D9B6',
     secondaryAccent: '#A78BFA',
     danger: '#FB7185',
     success: '#4ADE80',
     textPrimary: '#F8FAFC',
     textSecondary: '#94a3b8',
-    divider: 'rgba(255, 255, 255, 0.08)',
 };
 
 const RING_PALETTE = [
-    '#A78BFA', // Purple
-    '#FB7185', // Rose
-    '#38BDF8', // Sky
-    '#818CF8', // Indigo
-    '#F472B6', // Pink
-    '#22D3EE', // Cyan
-    '#C084FC', // Violet
-    '#60A5FA', // Blue
-    '#34D399', // Emerald
-    '#FBBF24', // Amber
+    '#A78BFA', '#FB7185', '#38BDF8', '#818CF8', '#F472B6',
+    '#22D3EE', '#C084FC', '#60A5FA', '#34D399', '#FBBF24',
 ];
+
+/* ── Cytoscape stylesheet (static — avoids re-creation) ── */
+function buildStylesheet(showLabels) {
+    return [
+        // ─── Normal Nodes ───
+        {
+            selector: 'node[type="normal"]',
+            style: {
+                'background-color': '#1a1a2e',
+                'background-opacity': 0.9,
+                'border-width': 1.5,
+                'border-color': 'rgba(229, 217, 182, 0.2)',
+                'label': showLabels ? 'data(label)' : '',
+                'font-size': '7px',
+                'font-family': 'Inter, sans-serif',
+                'font-weight': '500',
+                'color': COLORS.textSecondary,
+                'text-valign': 'bottom',
+                'text-margin-y': 6,
+                'width': 'data(sizeVal)',
+                'height': 'data(sizeVal)',
+                'opacity': 0.7,
+                'text-outline-width': 2,
+                'text-outline-color': '#000000',
+                'min-zoomed-font-size': 10,
+            },
+        },
+        // ─── Suspicious Nodes ───
+        {
+            selector: 'node[type="suspicious"]',
+            style: {
+                'background-color': COLORS.danger,
+                'background-opacity': 0.85,
+                'border-width': 2.5,
+                'border-color': '#FDA4AF',
+                'label': 'data(label)',
+                'font-size': '8px',
+                'font-family': 'Inter, sans-serif',
+                'font-weight': 'bold',
+                'color': '#FDA4AF',
+                'text-valign': 'bottom',
+                'text-margin-y': 7,
+                'width': 'data(sizeVal)',
+                'height': 'data(sizeVal)',
+                'opacity': 1,
+                'text-outline-width': 2,
+                'text-outline-color': '#000000',
+                'min-zoomed-font-size': 8,
+            },
+        },
+        // ─── Ring Nodes ───
+        {
+            selector: 'node[type="ring"]',
+            style: {
+                'background-color': 'data(ringColor)',
+                'background-opacity': 0.9,
+                'border-width': 3,
+                'border-color': '#ffffff',
+                'border-style': 'double',
+                'label': 'data(label)',
+                'font-size': '9px',
+                'font-family': 'Inter, sans-serif',
+                'font-weight': 'bold',
+                'color': COLORS.textPrimary,
+                'text-valign': 'bottom',
+                'text-margin-y': 8,
+                'width': 'mapData(sizeVal, 20, 50, 30, 60)',
+                'height': 'mapData(sizeVal, 20, 50, 30, 60)',
+                'opacity': 1,
+                'text-outline-width': 2.5,
+                'text-outline-color': '#000000',
+                'min-zoomed-font-size': 6,
+            },
+        },
+        // ─── Safe Edges (Green) ───
+        {
+            selector: 'edge[!suspicious]',
+            style: {
+                'width': 'data(weight)',
+                'line-color': 'rgba(74, 222, 128, 0.2)',
+                'target-arrow-color': 'rgba(74, 222, 128, 0.35)',
+                'target-arrow-shape': 'triangle',
+                'curve-style': 'bezier',
+                'arrow-scale': 0.7,
+                'opacity': 0.3,
+            },
+        },
+        // ─── Suspicious Edges (Red) ───
+        {
+            selector: 'edge[suspicious]',
+            style: {
+                'width': 'data(weight)',
+                'line-color': COLORS.danger,
+                'target-arrow-color': COLORS.danger,
+                'target-arrow-shape': 'triangle',
+                'curve-style': 'bezier',
+                'arrow-scale': 0.9,
+                'opacity': 0.7,
+            },
+        },
+        // ─── Selected State ───
+        {
+            selector: 'node:active, node:selected',
+            style: {
+                'border-color': COLORS.primaryAccent,
+                'border-width': 4,
+                'width': 'mapData(sizeVal, 20, 50, 40, 70)',
+                'height': 'mapData(sizeVal, 20, 50, 40, 70)',
+            },
+        },
+        // ─── Faded class (used for highlighting) ───
+        {
+            selector: '.faded',
+            style: { 'opacity': 0.06 },
+        },
+        {
+            selector: '.highlighted',
+            style: { 'opacity': 1 },
+        },
+    ];
+}
+
 
 /* ── Main NetworkGraph ── */
 export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
@@ -40,38 +152,28 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
     const wrapperRef = useRef(null);
     const cyRef = useRef(null);
     const tooltipRef = useRef(null);
-    const [showLabels, setShowLabels] = useState(true);
+    const [showLabels, setShowLabels] = useState(false); // off by default for perf
     const [cyReady, setCyReady] = useState(false);
-    const [activeFilter, setActiveFilter] = useState('all'); // all | suspicious | rings
+    const [activeFilter, setActiveFilter] = useState('all');
 
-    // Resize observer
-    useEffect(() => {
-        const cy = cyRef.current;
-        const container = containerRef.current;
-        if (!cy || !container) return;
+    // Pre-compute ring color map
+    const ringColors = useMemo(() => {
+        const map = {};
+        if (fraudRings) {
+            fraudRings.forEach((ring, i) => {
+                map[ring.ring_id] = RING_PALETTE[i % RING_PALETTE.length];
+            });
+        }
+        return map;
+    }, [fraudRings]);
 
-        const observer = new ResizeObserver(() => {
-            cy.resize();
-            cy.fit(undefined, 50);
-        });
-        observer.observe(container);
-        return () => observer.disconnect();
-    }, [cyReady]);
-
-    useEffect(() => {
-        if (!containerRef.current || !graphData) return;
-
-        // Ring color mapping
-        const ringColors = {};
-        fraudRings.forEach((ring, i) => {
-            ringColors[ring.ring_id] = RING_PALETTE[i % RING_PALETTE.length];
-        });
-
-        // Build elements
-        const elements = [];
+    // Pre-compute elements array
+    const elements = useMemo(() => {
+        if (!graphData) return [];
+        const els = [];
 
         for (const node of graphData.nodes) {
-            elements.push({
+            els.push({
                 group: 'nodes',
                 data: {
                     id: node.id,
@@ -92,7 +194,7 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
         }
 
         for (const edge of graphData.edges) {
-            elements.push({
+            els.push({
                 group: 'edges',
                 data: {
                     id: edge.id,
@@ -105,157 +207,87 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
                 },
             });
         }
+        return els;
+    }, [graphData, ringColors]);
 
-        const isLarge = graphData.isFiltered;
+    // Resize observer
+    useEffect(() => {
+        const cy = cyRef.current;
+        const container = containerRef.current;
+        if (!cy || !container) return;
 
-        const cy = cytoscape({
-            container: containerRef.current,
-            elements,
-            style: [
-                // ─── Normal Nodes ───
-                {
-                    selector: 'node[type="normal"]',
-                    style: {
-                        'background-color': '#1a1a2e',
-                        'background-opacity': 0.9,
-                        'border-width': 1.5,
-                        'border-color': 'rgba(229, 217, 182, 0.2)',
-                        'shadow-blur': 8,
-                        'shadow-color': 'rgba(229, 217, 182, 0.1)',
-                        'shadow-opacity': 0.3,
-                        'label': showLabels ? 'data(label)' : '',
-                        'font-size': '8px',
-                        'font-family': 'Inter, sans-serif',
-                        'font-weight': '500',
-                        'color': COLORS.textSecondary,
-                        'text-valign': 'bottom',
-                        'text-margin-y': 6,
-                        'width': 'data(sizeVal)',
-                        'height': 'data(sizeVal)',
-                        'opacity': 0.7,
-                        'text-outline-width': 2,
-                        'text-outline-color': '#000000',
-                        'transition-property': 'width, height, shadow-blur, opacity, border-color, border-width',
-                        'transition-duration': '0.25s',
-                    },
-                },
-                // ─── Suspicious Nodes ───
-                {
-                    selector: 'node[type="suspicious"]',
-                    style: {
-                        'background-color': COLORS.danger,
-                        'background-opacity': 0.85,
-                        'border-width': 2.5,
-                        'border-color': '#FDA4AF',
-                        'shadow-blur': 20,
-                        'shadow-color': COLORS.danger,
-                        'shadow-opacity': 0.5,
-                        'label': 'data(label)',
-                        'font-size': '9px',
-                        'font-family': 'Inter, sans-serif',
-                        'font-weight': 'bold',
-                        'color': '#FDA4AF',
-                        'text-valign': 'bottom',
-                        'text-margin-y': 7,
-                        'width': 'data(sizeVal)',
-                        'height': 'data(sizeVal)',
-                        'opacity': 1,
-                        'text-outline-width': 2,
-                        'text-outline-color': '#000000',
-                        'transition-property': 'width, height, shadow-blur, opacity, border-color, border-width',
-                        'transition-duration': '0.25s',
-                    },
-                },
-                // ─── Ring Nodes ───
-                {
-                    selector: 'node[type="ring"]',
-                    style: {
-                        'background-color': 'data(ringColor)',
-                        'background-opacity': 0.9,
-                        'border-width': 3,
-                        'border-color': '#ffffff',
-                        'border-style': 'double',
-                        'shadow-blur': 28,
-                        'shadow-color': 'data(ringColor)',
-                        'shadow-opacity': 0.7,
-                        'label': 'data(label)',
-                        'font-size': '10px',
-                        'font-family': 'Inter, sans-serif',
-                        'font-weight': 'bold',
-                        'color': COLORS.textPrimary,
-                        'text-valign': 'bottom',
-                        'text-margin-y': 8,
-                        'width': 'mapData(sizeVal, 20, 50, 30, 60)',
-                        'height': 'mapData(sizeVal, 20, 50, 30, 60)',
-                        'opacity': 1,
-                        'text-outline-width': 2.5,
-                        'text-outline-color': '#000000',
-                        'transition-property': 'width, height, shadow-blur, opacity, border-color, border-width',
-                        'transition-duration': '0.25s',
-                    },
-                },
-                // ─── Safe Edges (Green) ───
-                {
-                    selector: 'edge[!suspicious]',
-                    style: {
-                        'width': 'data(weight)',
-                        'line-color': 'rgba(74, 222, 128, 0.2)',
-                        'target-arrow-color': 'rgba(74, 222, 128, 0.35)',
-                        'target-arrow-shape': 'triangle',
-                        'curve-style': 'bezier',
-                        'arrow-scale': 0.7,
-                        'opacity': 0.35,
-                        'transition-property': 'opacity, line-color',
-                        'transition-duration': '0.3s',
-                    },
-                },
-                // ─── Suspicious Edges (Red gradient) ───
-                {
-                    selector: 'edge[suspicious]',
-                    style: {
-                        'width': 'data(weight)',
-                        'line-color': COLORS.danger,
-                        'target-arrow-color': COLORS.danger,
-                        'target-arrow-shape': 'triangle',
-                        'curve-style': 'bezier',
-                        'arrow-scale': 0.9,
-                        'opacity': 0.7,
-                        'transition-property': 'opacity, line-color',
-                        'transition-duration': '0.3s',
-                    },
-                },
-                // ─── Hover / Selected State ───
-                {
-                    selector: 'node:active, node:selected',
-                    style: {
-                        'border-color': COLORS.primaryAccent,
-                        'border-width': 4,
-                        'shadow-blur': 40,
-                        'shadow-color': COLORS.primaryAccent,
-                        'shadow-opacity': 0.8,
-                        'width': 'mapData(sizeVal, 20, 50, 40, 70)',
-                        'height': 'mapData(sizeVal, 20, 50, 40, 70)',
-                    },
-                },
-            ],
-            layout: {
-                name: isLarge ? 'grid' : 'cose',
-                animate: !isLarge,
-                animationDuration: 1200,
+        const observer = new ResizeObserver(() => {
+            cy.resize();
+            cy.fit(undefined, 50);
+        });
+        observer.observe(container);
+        return () => observer.disconnect();
+    }, [cyReady]);
+
+    // ── Initialize Cytoscape ──
+    useEffect(() => {
+        if (!containerRef.current || !graphData || elements.length === 0) return;
+
+        const nodeCount = graphData.nodes.length;
+        const edgeCount = graphData.edges.length;
+        const isLarge = nodeCount > 200;
+        const isVeryLarge = nodeCount > 500;
+
+        // Choose layout based on size
+        let layoutConfig;
+        if (isVeryLarge) {
+            // Grid is fast and predictable for very large graphs
+            layoutConfig = {
+                name: 'grid',
+                padding: 50,
+                avoidOverlap: true,
+                condense: true,
+            };
+        } else if (isLarge) {
+            // Cose with reduced iterations
+            layoutConfig = {
+                name: 'cose',
+                animate: false,
+                nodeRepulsion: () => 12000,
+                idealEdgeLength: () => 100,
+                edgeElasticity: () => 80,
+                gravity: 0.3,
+                numIter: 300,
+                randomize: true,
+                padding: 50,
+            };
+        } else {
+            // Full cose for small graphs
+            layoutConfig = {
+                name: 'cose',
+                animate: true,
+                animationDuration: 1000,
                 nodeRepulsion: () => 9000,
                 idealEdgeLength: () => 130,
                 edgeElasticity: () => 80,
                 gravity: 0.25,
-                numIter: isLarge ? 0 : 1000,
+                numIter: 800,
                 randomize: true,
                 padding: 50,
-            },
-            minZoom: 0.08,
+            };
+        }
+
+        const cy = cytoscape({
+            container: containerRef.current,
+            elements,
+            style: buildStylesheet(showLabels),
+            layout: layoutConfig,
+            minZoom: 0.05,
             maxZoom: 6,
-            wheelSensitivity: 0.25,
+            wheelSensitivity: 0.2,
+            textureOnViewport: isLarge,         // GPU texture for large graphs
+            hideEdgesOnViewport: isVeryLarge,   // hide edges while panning
+            hideLabelsOnViewport: isLarge,       // hide labels while panning
         });
 
-        // ─── Tooltip Events ───
+        // ─── Tooltip Events (debounced for performance) ───
+        let tooltipTimer = null;
+
         cy.on('mouseover', 'node', (event) => {
             const node = event.target;
             const data = node.data();
@@ -263,14 +295,11 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
             const tooltip = tooltipRef.current;
             if (!tooltip) return;
 
-            // Enlarge on hover
-            node.style({
-                'shadow-blur': 45,
-                'shadow-opacity': 0.95,
-            });
+            // Clear any pending tooltip hide
+            if (tooltipTimer) clearTimeout(tooltipTimer);
 
             const typeClass = data.type === 'ring' ? 'danger' : data.type === 'suspicious' ? 'suspicious' : '';
-            const typeLabel = data.type === 'ring' ? '⚠ Fraud Ring' : data.type === 'suspicious' ? '⚡ Suspicious' : '● Normal';
+            const typeLabel = data.type === 'ring' ? 'Fraud Ring' : data.type === 'suspicious' ? 'Suspicious' : 'Normal';
 
             tooltip.innerHTML = `
                 <div class="tooltip-header">
@@ -284,7 +313,6 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
                     <div class="tooltip-row"><span>Received</span><span>$${formatNumber(data.totalIn)}</span></div>
                     <div class="tooltip-row"><span>Sent</span><span>$${formatNumber(data.totalOut)}</span></div>
                     <div class="tooltip-row"><span>Transactions</span><span>${data.txCount}</span></div>
-                    <div class="tooltip-row"><span>Patterns</span><span>${data.patterns?.length ? data.patterns.join(', ') : 'None'}</span></div>
                     <div class="tooltip-row"><span>Ring</span><span>${data.ringId || '—'}</span></div>
                 </div>
             `;
@@ -293,23 +321,26 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
             let left = rect.left + pos.x + 20;
             let top = rect.top + pos.y - 20;
             if (left + 310 > window.innerWidth) left = rect.left + pos.x - 310;
-            if (top + 280 > window.innerHeight) top = window.innerHeight - 290;
+            if (top + 250 > window.innerHeight) top = window.innerHeight - 260;
             if (top < 10) top = 10;
 
             tooltip.style.left = `${left}px`;
             tooltip.style.top = `${top}px`;
             tooltip.style.display = 'block';
 
-            // Dim non-neighbors
-            const neighborhood = node.neighborhood().add(node);
-            cy.elements().not(neighborhood).style('opacity', 0.08);
-            neighborhood.style('opacity', 1);
+            // Use CSS classes instead of per-element style mutations (much faster)
+            if (!isVeryLarge) {
+                cy.elements().addClass('faded');
+                const neighborhood = node.neighborhood().add(node);
+                neighborhood.removeClass('faded').addClass('highlighted');
+            }
         });
 
-        cy.on('mouseout', 'node', (event) => {
-            if (tooltipRef.current) tooltipRef.current.style.display = 'none';
-            event.target.style({ 'shadow-blur': '', 'shadow-opacity': '' });
-            cy.elements().style('opacity', '');
+        cy.on('mouseout', 'node', () => {
+            tooltipTimer = setTimeout(() => {
+                if (tooltipRef.current) tooltipRef.current.style.display = 'none';
+            }, 50);
+            cy.elements().removeClass('faded highlighted');
         });
 
         cy.on('tap', 'node', (event) => {
@@ -317,63 +348,65 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
             if (onNodeSelect) onNodeSelect(data);
 
             // Highlight ring on tap
-            if (data.ringId) {
+            if (data.ringId && !isVeryLarge) {
+                cy.elements().addClass('faded');
                 const ringMembers = cy.nodes().filter((n) => n.data('ringId') === data.ringId);
-                cy.elements().style('opacity', 0.05);
-                ringMembers.style('opacity', 1);
-                ringMembers.connectedEdges().style('opacity', 0.8);
+                ringMembers.removeClass('faded').addClass('highlighted');
+                ringMembers.connectedEdges().removeClass('faded').addClass('highlighted');
             }
         });
 
         cy.on('tap', (event) => {
-            if (event.target === cy) cy.elements().style('opacity', '');
+            if (event.target === cy) {
+                cy.elements().removeClass('faded highlighted');
+            }
         });
 
         cyRef.current = cy;
         setCyReady(true);
 
         return () => {
+            if (tooltipTimer) clearTimeout(tooltipTimer);
             cy.destroy();
             cyRef.current = null;
             setCyReady(false);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [graphData, fraudRings, showLabels]);
+    }, [elements, showLabels]);
 
     // ── Filter logic ──
     useEffect(() => {
         const cy = cyRef.current;
         if (!cy) return;
 
-        if (activeFilter === 'all') {
-            cy.elements().style('opacity', '');
-        } else if (activeFilter === 'suspicious') {
-            cy.nodes().style('opacity', 0.08);
-            cy.edges().style('opacity', 0.05);
+        // Remove all highlight classes first
+        cy.elements().removeClass('faded highlighted');
+
+        if (activeFilter === 'suspicious') {
+            cy.elements().addClass('faded');
             const suspicious = cy.nodes().filter(n => n.data('type') === 'suspicious' || n.data('type') === 'ring');
-            suspicious.style('opacity', 1);
-            suspicious.connectedEdges().style('opacity', 0.8);
+            suspicious.removeClass('faded').addClass('highlighted');
+            suspicious.connectedEdges().removeClass('faded').addClass('highlighted');
         } else if (activeFilter === 'rings') {
-            cy.nodes().style('opacity', 0.08);
-            cy.edges().style('opacity', 0.05);
+            cy.elements().addClass('faded');
             const ringNodes = cy.nodes().filter(n => n.data('type') === 'ring');
-            ringNodes.style('opacity', 1);
-            ringNodes.connectedEdges().style('opacity', 0.8);
+            ringNodes.removeClass('faded').addClass('highlighted');
+            ringNodes.connectedEdges().removeClass('faded').addClass('highlighted');
         }
     }, [activeFilter, cyReady]);
 
-    const zoomIn = () => {
+    const zoomIn = useCallback(() => {
         const cy = cyRef.current;
         if (cy) cy.zoom({ level: cy.zoom() * 1.3, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
-    };
-    const zoomOut = () => {
+    }, []);
+    const zoomOut = useCallback(() => {
         const cy = cyRef.current;
         if (cy) cy.zoom({ level: cy.zoom() * 0.7, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
-    };
-    const fitView = () => {
+    }, []);
+    const fitView = useCallback(() => {
         if (cyRef.current) cyRef.current.fit(undefined, 50);
-    };
-    const toggleLabels = () => setShowLabels((v) => !v);
+    }, []);
+    const toggleLabels = useCallback(() => setShowLabels((v) => !v), []);
 
     return (
         <div className="network-graph-wrapper">
