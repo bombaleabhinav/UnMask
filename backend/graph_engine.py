@@ -35,7 +35,30 @@ def build_graph(transactions: list[dict]) -> dict:
         sender = tx["sender_id"]
         receiver = tx["receiver_id"]
         amount = float(tx["amount"])
-        ts = datetime.strptime(tx["timestamp"].strip(), "%Y-%m-%d %H:%M:%S")
+
+        try:
+            ts_str = tx["timestamp"].strip()
+            # Try multiple formats
+            for fmt in (
+                "%Y-%m-%d %H:%M:%S",   # 2026-02-01 10:15:00
+                "%d-%m-%Y %H:%M",      # 01-02-2026 10:15
+                "%d-%m-%Y %H:%M:%S",   # 01-02-2026 10:15:00
+                "%m-%d-%Y %H:%M",      # 02-01-2026 10:15
+                "%Y/%m/%d %H:%M:%S",   # 2026/02/01 10:15:00
+                "%d/%m/%Y %H:%M",      # 01/02/2026 10:15
+            ):
+                try:
+                    ts = datetime.strptime(ts_str, fmt)
+                    break
+                except ValueError:
+                    continue
+            else:
+                # If loop completes without break, no format matched
+                raise ValueError(f"Unknown date format: {ts_str}")
+        except Exception as e:
+            print(f"Skipping bad transaction {tx.get('transaction_id')}: {e}")
+            continue
+
         tx_id = tx["transaction_id"]
 
         nodes.add(sender)
