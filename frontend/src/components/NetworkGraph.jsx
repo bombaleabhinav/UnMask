@@ -78,13 +78,13 @@ function ParticleOverlay({ cyRef, containerRef }) {
                     // Glow
                     ctx.beginPath();
                     ctx.arc(x, y, p.size * 3, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(255, 26, 26, 0.15)';
+                    ctx.fillStyle = 'rgba(56, 189, 248, 0.15)'; // Primary Accent Glow
                     ctx.fill();
 
                     // Core
                     ctx.beginPath();
                     ctx.arc(x, y, p.size, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(255, 26, 26, 0.7)';
+                    ctx.fillStyle = 'rgba(56, 189, 248, 0.7)'; // Primary Accent Core
                     ctx.fill();
                 } catch {
                     // Edge may have been removed
@@ -137,15 +137,21 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
     useEffect(() => {
         if (!containerRef.current || !graphData) return;
 
-        // Red-themed ring colors
+        // Cool-themed ring colors (Ice Blue, Purple, Pink, Violet, Cyan)
         const ringColors = {};
-        const RED_PALETTE = [
-            '#FF1A1A', '#FF4444', '#CC0000', '#FF6666',
-            '#E60000', '#FF3333', '#B30000', '#FF5555',
-            '#990000', '#FF7777', '#800000', '#FF8888',
+        const COOL_PALETTE = [
+            '#38BDF8', // Primary Accent
+            '#A78BFA', // Secondary Accent
+            '#FB7185', // Danger
+            '#818CF8', // Indigo 400
+            '#22D3EE', // Cyan 400
+            '#F472B6', // Pink 400
+            '#C084FC', // Purple 400
+            '#60A5FA', // Blue 400
+            '#34D399', // Emerald 400 (Success variant)
         ];
         fraudRings.forEach((ring, i) => {
-            ringColors[ring.ring_id] = RED_PALETTE[i % RED_PALETTE.length];
+            ringColors[ring.ring_id] = COOL_PALETTE[i % COOL_PALETTE.length];
         });
 
         // Build elements
@@ -167,7 +173,7 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
                     ringId: node.ringId,
                     patterns: node.patterns,
                     sizeVal: node.sizeVal,
-                    ringColor: node.ringId ? (ringColors[node.ringId] || '#FF1A1A') : null,
+                    ringColor: node.ringId ? (ringColors[node.ringId] || '#A78BFA') : null,
                 },
             });
         }
@@ -193,53 +199,53 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
             container: containerRef.current,
             elements,
             style: [
-                // Normal nodes — subtle dark red glow
+                // Normal nodes — subtle dark slate/blue
                 {
                     selector: 'node[type="normal"]',
                     style: {
-                        'background-color': '#7A0000',
+                        'background-color': '#0f172a', // Slate 900
                         'border-width': 1.5,
-                        'border-color': '#B00000',
+                        'border-color': '#334155', // Slate 700
                         'shadow-blur': 12,
-                        'shadow-color': '#7A0000',
-                        'shadow-opacity': 0.4,
+                        'shadow-color': '#38BDF8', // Primary Accent
+                        'shadow-opacity': 0.15,
                         'label': showLabels ? 'data(label)' : '',
                         'font-size': '9px',
                         'font-family': 'Inter, sans-serif',
-                        'color': '#666',
+                        'color': '#94a3b8', // Text Secondary
                         'text-valign': 'bottom',
                         'text-margin-y': 6,
                         'width': 'data(sizeVal)',
                         'height': 'data(sizeVal)',
-                        'opacity': 0.7,
+                        'opacity': 0.8,
                         'text-outline-width': 2,
-                        'text-outline-color': '#000',
+                        'text-outline-color': '#020617', // Bg Primary
                         'transition-property': 'width, height, shadow-blur, opacity',
                         'transition-duration': '0.2s',
                     },
                 },
-                // Suspicious nodes — strong red glow
+                // Suspicious nodes — Danger (Rose)
                 {
                     selector: 'node[type="suspicious"]',
                     style: {
-                        'background-color': '#FF1A1A',
+                        'background-color': '#FB7185', // Danger
                         'border-width': 2.5,
-                        'border-color': '#FF4444',
+                        'border-color': '#FDA4AF', // Rose 300
                         'shadow-blur': 25,
-                        'shadow-color': '#FF1A1A',
-                        'shadow-opacity': 0.7,
+                        'shadow-color': '#FB7185',
+                        'shadow-opacity': 0.6,
                         'label': 'data(label)',
                         'font-size': '10px',
                         'font-family': 'Inter, sans-serif',
                         'font-weight': 'bold',
-                        'color': '#FF6666',
+                        'color': '#FDA4AF',
                         'text-valign': 'bottom',
                         'text-margin-y': 6,
                         'width': 'data(sizeVal)',
                         'height': 'data(sizeVal)',
                         'opacity': 1,
                         'text-outline-width': 2,
-                        'text-outline-color': '#000',
+                        'text-outline-color': '#020617',
                         'transition-property': 'width, height, shadow-blur, opacity',
                         'transition-duration': '0.2s',
                     },
@@ -259,25 +265,25 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
                         'font-size': '11px',
                         'font-family': 'Inter, sans-serif',
                         'font-weight': 'bold',
-                        'color': '#f1f5f9',
+                        'color': '#f8fafc', // Text Primary
                         'text-valign': 'bottom',
                         'text-margin-y': 8,
                         'width': 'mapData(sizeVal, 20, 50, 30, 60)',
                         'height': 'mapData(sizeVal, 20, 50, 30, 60)',
                         'opacity': 1,
                         'text-outline-width': 2,
-                        'text-outline-color': '#000',
+                        'text-outline-color': '#020617',
                         'transition-property': 'width, height, shadow-blur, opacity',
                         'transition-duration': '0.2s',
                     },
                 },
-                // Normal edges — thin red
+                // Normal edges — thin slate/blue
                 {
                     selector: 'edge[!suspicious]',
                     style: {
                         'width': 'data(weight)',
-                        'line-color': 'rgba(176, 0, 0, 0.25)',
-                        'target-arrow-color': 'rgba(176, 0, 0, 0.35)',
+                        'line-color': 'rgba(148, 163, 184, 0.15)', // Slate 400 low opacity
+                        'target-arrow-color': 'rgba(148, 163, 184, 0.25)',
                         'target-arrow-shape': 'triangle',
                         'curve-style': 'bezier',
                         'arrow-scale': 0.8,
@@ -286,13 +292,13 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
                         'transition-duration': '0.3s',
                     },
                 },
-                // Suspicious edges — bright red
+                // Suspicious edges — Danger
                 {
                     selector: 'edge[suspicious]',
                     style: {
                         'width': 'data(weight)',
-                        'line-color': '#B00000',
-                        'target-arrow-color': '#FF1A1A',
+                        'line-color': '#FB7185', // Danger
+                        'target-arrow-color': '#FB7185',
                         'target-arrow-shape': 'triangle',
                         'curve-style': 'bezier',
                         'arrow-scale': 1,
@@ -305,10 +311,10 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
                 {
                     selector: 'node:active, node:selected',
                     style: {
-                        'border-color': '#FF1A1A',
+                        'border-color': '#38BDF8', // Primary Accent
                         'border-width': 4,
                         'shadow-blur': 40,
-                        'shadow-color': '#FF1A1A',
+                        'shadow-color': '#38BDF8',
                         'shadow-opacity': 0.9,
                         'width': 'mapData(sizeVal, 20, 50, 40, 70)',
                         'height': 'mapData(sizeVal, 20, 50, 40, 70)',
@@ -430,16 +436,16 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
         <>
             {/* Controls */}
             <div className="flex gap-2 mb-3">
-                <button onClick={zoomIn} title="Zoom In" className="w-9 h-9 flex items-center justify-center rounded-lg border border-[#FF1A1A]/15 bg-black/60 text-neutral-500 hover:text-[#FF1A1A] hover:border-[#FF1A1A]/40 transition-colors duration-200 text-lg cursor-pointer">+</button>
-                <button onClick={zoomOut} title="Zoom Out" className="w-9 h-9 flex items-center justify-center rounded-lg border border-[#FF1A1A]/15 bg-black/60 text-neutral-500 hover:text-[#FF1A1A] hover:border-[#FF1A1A]/40 transition-colors duration-200 text-lg cursor-pointer">−</button>
-                <button onClick={fitView} title="Fit" className="w-9 h-9 flex items-center justify-center rounded-lg border border-[#FF1A1A]/15 bg-black/60 text-neutral-500 hover:text-[#FF1A1A] hover:border-[#FF1A1A]/40 transition-colors duration-200 text-lg cursor-pointer">⊞</button>
-                <button onClick={toggleLabels} title="Toggle Labels" className="w-9 h-9 flex items-center justify-center rounded-lg border border-[#FF1A1A]/15 bg-black/60 text-neutral-500 hover:text-[#FF1A1A] hover:border-[#FF1A1A]/40 transition-colors duration-200 text-sm font-semibold cursor-pointer">Aa</button>
+                <button onClick={zoomIn} title="Zoom In" className="w-9 h-9 flex items-center justify-center rounded-lg border border-primary-accent/15 bg-bg-primary/60 text-neutral-500 hover:text-primary-accent hover:border-primary-accent/40 transition-colors duration-200 text-lg cursor-pointer">+</button>
+                <button onClick={zoomOut} title="Zoom Out" className="w-9 h-9 flex items-center justify-center rounded-lg border border-primary-accent/15 bg-bg-primary/60 text-neutral-500 hover:text-primary-accent hover:border-primary-accent/40 transition-colors duration-200 text-lg cursor-pointer">−</button>
+                <button onClick={fitView} title="Fit" className="w-9 h-9 flex items-center justify-center rounded-lg border border-primary-accent/15 bg-bg-primary/60 text-neutral-500 hover:text-primary-accent hover:border-primary-accent/40 transition-colors duration-200 text-lg cursor-pointer">⊞</button>
+                <button onClick={toggleLabels} title="Toggle Labels" className="w-9 h-9 flex items-center justify-center rounded-lg border border-primary-accent/15 bg-bg-primary/60 text-neutral-500 hover:text-primary-accent hover:border-primary-accent/40 transition-colors duration-200 text-sm font-semibold cursor-pointer">Aa</button>
             </div>
 
             {/* Graph container */}
             <div
                 ref={wrapperRef}
-                className="relative rounded-xl border border-[#FF1A1A]/10 overflow-hidden bg-black"
+                className="relative rounded-xl border border-primary-accent/10 overflow-hidden bg-bg-primary"
             >
                 <div
                     ref={containerRef}
@@ -451,30 +457,30 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
                 {cyReady && <ParticleOverlay cyRef={cyRef} containerRef={containerRef} />}
 
                 {/* Legend */}
-                <div className="absolute bottom-4 left-4 bg-black/90 border border-[#FF1A1A]/10 rounded-xl px-5 py-4 z-10">
+                <div className="absolute bottom-4 left-4 bg-bg-primary/90 border border-primary-accent/10 rounded-xl px-5 py-4 z-10">
                     <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-600 mb-3">Legend</div>
                     <div className="flex flex-col gap-1.5 text-xs text-neutral-500">
                         <div className="flex items-center gap-2.5">
-                            <span className="w-3 h-3 rounded-full bg-[#7A0000] shadow-[0_0_6px_#7A0000]" /> Safe
+                            <span className="w-3 h-3 rounded-full bg-[#334155] shadow-[0_0_6px_#334155]" /> Safe
                         </div>
                         <div className="flex items-center gap-2.5">
-                            <span className="w-3 h-3 rounded-full bg-[#FF1A1A] shadow-[0_0_10px_#FF1A1A]" /> Suspicious
+                            <span className="w-3 h-3 rounded-full bg-danger shadow-[0_0_10px_#FB7185]" /> Suspicious
                         </div>
                         <div className="flex items-center gap-2.5">
-                            <span className="w-3 h-3 rounded-full bg-[#FF4444] border border-white shadow-[0_0_12px_#FF4444]" /> Ring Member
+                            <span className="w-3 h-3 rounded-full bg-secondary-accent border border-white shadow-[0_0_12px_#A78BFA]" /> Ring Member
                         </div>
                         <div className="flex items-center gap-2.5 mt-1">
-                            <span className="w-6 h-px bg-[#B00000]/50" /> Normal Flow
+                            <span className="w-6 h-px bg-slate-600/50" /> Normal Flow
                         </div>
                         <div className="flex items-center gap-2.5">
-                            <span className="w-6 h-px bg-[#FF1A1A] shadow-[0_0_4px_#FF1A1A]" /> Suspicious Flow
+                            <span className="w-6 h-px bg-danger shadow-[0_0_4px_#FB7185]" /> Suspicious Flow
                         </div>
                     </div>
                 </div>
 
                 {/* Filtered notice */}
                 {graphData.isFiltered && (
-                    <div className="absolute bottom-5 right-5 bg-black/90 text-neutral-600 px-4 py-2.5 rounded-lg border border-[#FF1A1A]/10 text-xs z-10">
+                    <div className="absolute bottom-5 right-5 bg-bg-primary/90 text-neutral-600 px-4 py-2.5 rounded-lg border border-primary-accent/10 text-xs z-10">
                         Rendering {graphData.renderedNodes} nodes (of {graphData.totalNodes})
                     </div>
                 )}

@@ -8,6 +8,7 @@ import FraudRingMatrix from './components/FraudRingMatrix';
 import AccountsTable from './components/AccountsTable';
 import NodeIntelPanel from './components/NodeIntelPanel';
 import ForensicLoader from './components/ForensicLoader';
+import CustomCursor from './components/CustomCursor';
 
 export default function App() {
   const [apiUrl, setApiUrl] = useState(
@@ -106,7 +107,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-bg-primary text-text-primary">
+      <CustomCursor />
       {/* Loader overlay */}
       <ForensicLoader visible={loading} />
 
@@ -134,11 +136,11 @@ export default function App() {
             <section id="graph-section" className="py-12 animate-[fadeUp_0.5s_ease_0.1s_both]">
               <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
                 <h2 className="text-2xl font-bold tracking-tight flex items-center gap-3">
-                  <span className="text-[#FF1A1A]">🕸️</span> Network Graph
+                  <span className="text-primary-accent">🕸️</span> Network Graph
                 </h2>
                 <button
                   onClick={handleDownload}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-lg bg-[#B00000] text-white hover:bg-[#FF1A1A] transition-colors duration-200 cursor-pointer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-lg bg-primary-accent/10 text-primary-accent border border-primary-accent/20 hover:bg-primary-accent/20 transition-colors duration-200 cursor-pointer"
                 >
                   ↓ Download Report
                 </button>
@@ -160,7 +162,7 @@ export default function App() {
             <section className="text-center py-16 pb-24">
               <button
                 onClick={handleNewAnalysis}
-                className="px-8 py-3 text-xs font-semibold uppercase tracking-[0.2em] rounded-xl border border-[#FF1A1A]/15 text-neutral-500 hover:text-[#FF1A1A] hover:border-[#FF1A1A]/30 transition-all duration-200 cursor-pointer"
+                className="px-8 py-3 text-xs font-semibold uppercase tracking-[0.2em] rounded-xl border border-primary-accent/15 text-neutral-500 hover:text-primary-accent hover:border-primary-accent/30 transition-all duration-200 cursor-pointer"
               >
                 ← New Analysis
               </button>
@@ -173,29 +175,7 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className="text-center py-6 border-t border-[#7A0000]/15 text-neutral-700 text-xs tracking-wider">
-        <p>UNMASK v1.0</p>
-        <div className="mt-1">
-          <span
-            onClick={() => setShowConfig(!showConfig)}
-            className="cursor-pointer opacity-40 hover:opacity-80 hover:text-[#FF1A1A] transition-all duration-200"
-          >
-            ⚙ {(() => { try { return new URL(apiUrl).hostname } catch { return 'localhost' } })()}
-          </span>
-          {showConfig && (
-            <div className="mt-2 inline-block">
-              <input
-                type="text"
-                defaultValue={apiUrl}
-                placeholder="Backend URL"
-                onKeyDown={(e) => { if (e.key === 'Enter') handleUrlChange(e.target.value); }}
-                onBlur={(e) => handleUrlChange(e.target.value)}
-                className="px-3 py-1.5 rounded-lg bg-neutral-950 border border-[#7A0000]/20 text-neutral-400 text-xs w-[260px] focus:outline-none focus:border-[#FF1A1A]/40"
-              />
-            </div>
-          )}
-        </div>
-      </footer>
+
 
       {/* Fade-up keyframe */}
       <style>{`
