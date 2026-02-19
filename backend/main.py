@@ -3,11 +3,21 @@ ForensicFlow — FastAPI Backend
 Exposes REST endpoints for CSV upload and graph analysis.
 """
 
+import logging
+
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from graph_engine import analyze_transactions, parse_csv_content
+
+# ── Logging setup ──
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s │ %(levelname)-7s │ %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger("forensicflow")
 
 app = FastAPI(
     title="ForensicFlow API",
@@ -27,11 +37,13 @@ app.add_middleware(
 
 @app.get("/")
 def root():
+    logger.info("GET  /              ── 200 OK")
     return {"message": "ForensicFlow API is running", "version": "1.0.0"}
 
 
 @app.get("/health")
 def health():
+    logger.info("GET  /health        ── 200 OK")
     return {"status": "ok"}
 
 
@@ -68,6 +80,15 @@ async def analyze(file: UploadFile = File(...)):
         )
 
     result = analyze_transactions(transactions)
+
+    summary = result.get("summary", {})
+    logger.info(
+        "POST /api/analyze   ── 200 OK  │ %d transactions │ %d suspicious │ %d rings │ %.2fs",
+        summary.get("total_transactions", 0),
+        summary.get("suspicious_accounts_flagged", 0),
+        summary.get("fraud_rings_detected", 0),
+        summary.get("processing_time_seconds", 0),
+    )
     return result
 
 
