@@ -3,7 +3,7 @@ import './index.css';
 import HeroSection from './components/HeroSection';
 import ResultsSection from './components/ResultsSection';
 
-const API_URL = 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function App() {
   const [result, setResult] = useState(null);
