@@ -20,7 +20,7 @@ export default function ForensicLoader({ visible }) {
 
     return (
         <div
-            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black transition-opacity duration-500"
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-bg-primary transition-opacity duration-500"
             style={{ opacity }}
         >
             {/* Animated grid background */}
@@ -28,7 +28,7 @@ export default function ForensicLoader({ visible }) {
                 className="absolute inset-0 pointer-events-none"
                 style={{
                     backgroundImage:
-                        'linear-gradient(rgba(255,26,26,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,26,26,0.03) 1px, transparent 1px)',
+                        'linear-gradient(rgba(56, 189, 248, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(56, 189, 248, 0.03) 1px, transparent 1px)',
                     backgroundSize: '50px 50px',
                     maskImage: 'radial-gradient(ellipse at center, black 20%, transparent 70%)',
                     WebkitMaskImage: 'radial-gradient(ellipse at center, black 20%, transparent 70%)',
@@ -43,7 +43,7 @@ export default function ForensicLoader({ visible }) {
                     className="text-2xl sm:text-3xl font-light tracking-[0.2em] text-white/90 mb-10 animate-[fadeIn_1s_ease_forwards]"
                     style={{ fontFamily: "'Inter', sans-serif" }}
                 >
-                    Initializing Forensic Engine...
+                    INITIALIZING
                 </p>
 
                 {/* Loading bar */}
@@ -51,17 +51,12 @@ export default function ForensicLoader({ visible }) {
                     <div
                         className="h-full rounded-full"
                         style={{
-                            background: '#FF1A1A',
-                            boxShadow: '0 0 12px rgba(255,26,26,0.6)',
+                            background: 'var(--primary-accent)',
+                            boxShadow: '0 0 12px rgba(56, 189, 248, 0.6)',
                             animation: 'scanLine 1.8s ease-in-out infinite',
                         }}
                     />
                 </div>
-
-                {/* Subtitle */}
-                <p className="text-[10px] uppercase tracking-[0.4em] text-neutral-700 mt-6 animate-[fadeIn_1.5s_ease_forwards]">
-                    Analyzing transaction network
-                </p>
             </div>
 
             {/* Keyframes */}

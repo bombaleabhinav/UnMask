@@ -44,14 +44,14 @@ function RiskBar({ score }) {
                     className="h-full rounded-full transition-all duration-1000 ease-out"
                     style={{
                         width: `${width}%`,
-                        background: 'linear-gradient(90deg, #7A0000, #B00000, #FF1A1A)',
-                        boxShadow: `0 0 ${6 + glowIntensity * 14}px rgba(255, 26, 26, ${0.15 + glowIntensity * 0.4})`,
+                        background: 'linear-gradient(90deg, var(--success), var(--primary-accent), var(--danger))',
+                        boxShadow: `0 0 ${6 + glowIntensity * 14}px rgba(251, 113, 133, ${0.15 + glowIntensity * 0.4})`,
                     }}
                 />
             </div>
             <span
                 className="text-xs font-mono font-bold tabular-nums"
-                style={{ color: score >= 70 ? '#FF1A1A' : score >= 40 ? '#B00000' : '#7A0000' }}
+                style={{ color: score >= 70 ? 'var(--danger)' : score >= 40 ? 'var(--primary-accent)' : 'var(--success)' }}
             >
                 {score.toFixed(1)}%
             </span>
@@ -82,7 +82,7 @@ export default function FraudRingMatrix({ rings, onRingHover }) {
             {/* Header */}
             <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
                 <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                    <span className="text-[#FF1A1A]">🔗</span> Fraud Ring Matrix
+                    <span className="text-danger">🔗</span> Fraud Ring Matrix
                 </h2>
                 <span className="text-xs font-mono text-neutral-600 tracking-wide">
                     {rings.length} RING{rings.length !== 1 ? 'S' : ''} DETECTED
@@ -90,11 +90,11 @@ export default function FraudRingMatrix({ rings, onRingHover }) {
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto rounded-xl border border-[#FF1A1A]/8 bg-black">
+            <div className="overflow-x-auto rounded-xl border border-primary-accent/10 bg-bg-primary">
                 <table className="w-full text-sm">
                     {/* Head */}
                     <thead>
-                        <tr className="border-b border-[#FF1A1A]/10">
+                        <tr className="border-b border-primary-accent/10">
                             {['RING ID', 'PATTERN', 'MEMBERS', 'RISK SCORE', 'ACCOUNTS'].map((col) => (
                                 <th
                                     key={col}
@@ -122,10 +122,10 @@ export default function FraudRingMatrix({ rings, onRingHover }) {
                                 <tr
                                     key={ring.ring_id}
                                     className={`
-                    border-b border-[#7A0000]/15 transition-all duration-200 cursor-default
+                    border-b border-divider transition-all duration-200 cursor-default
                     ${hoveredRing === ring.ring_id
-                                            ? 'bg-[#FF1A1A]/[0.04] shadow-[inset_0_0_30px_rgba(255,26,26,0.05)]'
-                                            : 'hover:bg-[#FF1A1A]/[0.02]'
+                                            ? 'bg-danger/[0.04] shadow-[inset_0_0_30px_rgba(251,113,133,0.05)]'
+                                            : 'hover:bg-danger/[0.02]'
                                         }
                   `}
                                     onMouseEnter={() => handleRowEnter(ring)}
@@ -133,17 +133,14 @@ export default function FraudRingMatrix({ rings, onRingHover }) {
                                 >
                                     {/* Ring ID */}
                                     <td className="px-5 py-4">
-                                        <span
-                                            className="font-mono font-bold text-sm tracking-tight"
-                                            style={{ color: '#FF1A1A' }}
-                                        >
+                                        <span className="font-mono font-bold text-sm tracking-tight text-danger">
                                             {ring.ring_id}
                                         </span>
                                     </td>
 
                                     {/* Pattern */}
                                     <td className="px-5 py-4">
-                                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-[0.15em] border border-[#FF1A1A]/10 bg-[#FF1A1A]/[0.04] text-[#FF1A1A]/60">
+                                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-[0.15em] border border-danger/10 bg-danger/[0.04] text-danger/80">
                                             <span className="text-sm">{PATTERN_ICONS[ring.pattern_type] || '●'}</span>
                                             {PATTERN_LABELS[ring.pattern_type] || ring.pattern_type}
                                         </span>
@@ -173,7 +170,7 @@ export default function FraudRingMatrix({ rings, onRingHover }) {
                                                 </span>
                                             ))}
                                             {ring.member_accounts.length > 5 && (
-                                                <span className="font-mono text-[11px] text-[#FF1A1A]/40 px-2 py-0.5">
+                                                <span className="font-mono text-[11px] text-danger/40 px-2 py-0.5">
                                                     +{ring.member_accounts.length - 5}
                                                 </span>
                                             )}
@@ -192,7 +189,7 @@ export default function FraudRingMatrix({ rings, onRingHover }) {
                     <button
                         disabled={page <= 1}
                         onClick={() => setPage(page - 1)}
-                        className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 border border-[#FF1A1A]/10 rounded-lg hover:text-[#FF1A1A] hover:border-[#FF1A1A]/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
+                        className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 border border-primary-accent/10 rounded-lg hover:text-primary-accent hover:border-primary-accent/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
                     >
                         ← Prev
                     </button>
@@ -202,7 +199,7 @@ export default function FraudRingMatrix({ rings, onRingHover }) {
                     <button
                         disabled={page >= totalPages}
                         onClick={() => setPage(page + 1)}
-                        className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 border border-[#FF1A1A]/10 rounded-lg hover:text-[#FF1A1A] hover:border-[#FF1A1A]/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
+                        className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 border border-primary-accent/10 rounded-lg hover:text-primary-accent hover:border-primary-accent/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
                     >
                         Next →
                     </button>

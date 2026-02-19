@@ -29,14 +29,14 @@ function ScoreBar({ score }) {
                     className="h-full rounded-full transition-all duration-1000 ease-out"
                     style={{
                         width: `${width}%`,
-                        background: 'linear-gradient(90deg, #7A0000, #B00000, #FF1A1A)',
-                        boxShadow: `0 0 ${6 + glowIntensity * 10}px rgba(255, 26, 26, ${0.15 + glowIntensity * 0.3})`,
+                        background: 'linear-gradient(90deg, var(--success), var(--primary-accent), var(--danger))',
+                        boxShadow: `0 0 ${6 + glowIntensity * 10}px rgba(251, 113, 133, ${0.15 + glowIntensity * 0.3})`,
                     }}
                 />
             </div>
             <span
                 className="text-xs font-mono font-bold tabular-nums"
-                style={{ color: score >= 70 ? '#FF1A1A' : score >= 40 ? '#B00000' : '#7A0000' }}
+                style={{ color: score >= 70 ? 'var(--danger)' : score >= 40 ? 'var(--primary-accent)' : 'var(--success)' }}
             >
                 {score.toFixed(1)}
             </span>
@@ -55,17 +55,17 @@ export default function AccountsTable({ accounts }) {
         <section>
             <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
                 <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                    <span className="text-[#FF1A1A]">🚨</span> Suspicious Accounts
+                    <span className="text-danger">🚨</span> Suspicious Accounts
                 </h2>
                 <span className="text-xs font-mono text-neutral-600 tracking-wide">
                     {accounts.length} FLAGGED
                 </span>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-[#FF1A1A]/8 bg-black">
+            <div className="overflow-x-auto rounded-xl border border-primary-accent/10 bg-bg-primary">
                 <table className="w-full text-sm">
                     <thead>
-                        <tr className="border-b border-[#FF1A1A]/10">
+                        <tr className="border-b border-primary-accent/10">
                             {['ACCOUNT ID', 'SUSPICION SCORE', 'DETECTED PATTERNS', 'RING ID'].map((col) => (
                                 <th
                                     key={col}
@@ -87,10 +87,10 @@ export default function AccountsTable({ accounts }) {
                             pageData.map((account) => (
                                 <tr
                                     key={account.account_id}
-                                    className="border-b border-[#7A0000]/15 transition-all duration-200 hover:bg-[#FF1A1A]/[0.02]"
+                                    className="border-b border-divider transition-all duration-200 hover:bg-danger/[0.02]"
                                 >
                                     <td className="px-5 py-4">
-                                        <span className="font-mono font-bold text-sm text-[#FF1A1A]/80">
+                                        <span className="font-mono font-bold text-sm text-danger/80">
                                             {account.account_id}
                                         </span>
                                     </td>
@@ -102,7 +102,7 @@ export default function AccountsTable({ accounts }) {
                                             {account.detected_patterns.map((p, i) => (
                                                 <span
                                                     key={i}
-                                                    className="px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold uppercase tracking-wide border border-[#FF1A1A]/10 bg-[#FF1A1A]/[0.04] text-[#FF1A1A]/50"
+                                                    className="px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold uppercase tracking-wide border border-danger/10 bg-danger/[0.04] text-danger/50"
                                                 >
                                                     {p}
                                                 </span>
@@ -110,7 +110,7 @@ export default function AccountsTable({ accounts }) {
                                         </div>
                                     </td>
                                     <td className="px-5 py-4">
-                                        <span className="font-mono font-bold text-sm text-[#FF1A1A]/60">
+                                        <span className="font-mono font-bold text-sm text-danger/60">
                                             {account.ring_id || '—'}
                                         </span>
                                     </td>
@@ -126,7 +126,7 @@ export default function AccountsTable({ accounts }) {
                     <button
                         disabled={page <= 1}
                         onClick={() => setPage(page - 1)}
-                        className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 border border-[#FF1A1A]/10 rounded-lg hover:text-[#FF1A1A] hover:border-[#FF1A1A]/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
+                        className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 border border-primary-accent/10 rounded-lg hover:text-primary-accent hover:border-primary-accent/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
                     >
                         ← Prev
                     </button>
@@ -136,7 +136,7 @@ export default function AccountsTable({ accounts }) {
                     <button
                         disabled={page >= totalPages}
                         onClick={() => setPage(page + 1)}
-                        className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 border border-[#FF1A1A]/10 rounded-lg hover:text-[#FF1A1A] hover:border-[#FF1A1A]/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
+                        className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 border border-primary-accent/10 rounded-lg hover:text-primary-accent hover:border-primary-accent/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
                     >
                         Next →
                     </button>

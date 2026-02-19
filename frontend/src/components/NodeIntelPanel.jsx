@@ -42,8 +42,8 @@ export default function NodeIntelPanel({ node, onClose }) {
                 className="fixed top-0 right-0 z-50 h-full w-[380px] max-w-[90vw] flex flex-col transition-transform duration-300 ease-out"
                 style={{
                     transform: visible ? 'translateX(0)' : 'translateX(100%)',
-                    background: 'rgba(122, 0, 0, 0.15)',
-                    borderLeft: '2px solid #FF1A1A',
+                    background: 'rgba(2, 6, 23, 0.85)', // Dark background
+                    borderLeft: '2px solid var(--primary-accent)', // Blue border
                     backdropFilter: 'blur(24px)',
                     WebkitBackdropFilter: 'blur(24px)',
                 }}
@@ -52,7 +52,7 @@ export default function NodeIntelPanel({ node, onClose }) {
                 <div className="flex justify-end p-4">
                     <button
                         onClick={handleClose}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-500 hover:text-[#FF1A1A] hover:bg-[#FF1A1A]/10 transition-all duration-200 cursor-pointer text-lg"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-500 hover:text-primary-accent hover:bg-primary-accent/10 transition-all duration-200 cursor-pointer text-lg"
                     >
                         ✕
                     </button>
@@ -67,8 +67,7 @@ export default function NodeIntelPanel({ node, onClose }) {
                             Account Intelligence
                         </div>
                         <h3
-                            className="text-2xl font-black font-mono tracking-tight break-all"
-                            style={{ color: '#FF1A1A' }}
+                            className="text-2xl font-black font-mono tracking-tight break-all text-primary-accent"
                         >
                             {node.id}
                         </h3>
@@ -77,10 +76,10 @@ export default function NodeIntelPanel({ node, onClose }) {
                                 className={`
                   inline-block text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border
                   ${node.type === 'ring'
-                                        ? 'text-[#FF4444] border-[#FF4444]/30 bg-[#FF4444]/10'
+                                        ? 'text-secondary-accent border-secondary-accent/30 bg-secondary-accent/10'
                                         : node.type === 'suspicious'
-                                            ? 'text-[#FF1A1A] border-[#FF1A1A]/30 bg-[#FF1A1A]/10'
-                                            : 'text-[#7A0000] border-[#7A0000]/30 bg-[#7A0000]/10'
+                                            ? 'text-danger border-danger/30 bg-danger/10'
+                                            : 'text-text-secondary border-text-secondary/30 bg-text-secondary/10'
                                     }
                 `}
                             >
@@ -107,8 +106,8 @@ export default function NodeIntelPanel({ node, onClose }) {
                                 className="h-full rounded-full transition-all duration-700 ease-out"
                                 style={{
                                     width: `${meterWidth}%`,
-                                    background: `linear-gradient(90deg, #7A0000, #B00000, #FF1A1A)`,
-                                    boxShadow: `0 0 ${12 + glowIntensity * 20}px rgba(255, 26, 26, ${0.2 + glowIntensity * 0.5})`,
+                                    background: `linear-gradient(90deg, var(--success), var(--primary-accent), var(--danger))`,
+                                    boxShadow: `0 0 ${12 + glowIntensity * 20}px rgba(251, 113, 133, ${0.2 + glowIntensity * 0.5})`,
                                 }}
                             />
                         </div>
@@ -125,7 +124,7 @@ export default function NodeIntelPanel({ node, onClose }) {
                         ].map((item) => (
                             <div
                                 key={item.label}
-                                className="px-3 py-3 rounded-lg border border-[#FF1A1A]/8 bg-[#FF1A1A]/[0.03]"
+                                className="px-3 py-3 rounded-lg border border-primary-accent/10 bg-primary-accent/[0.03]"
                             >
                                 <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-600 mb-1">
                                     {item.label}
@@ -146,7 +145,7 @@ export default function NodeIntelPanel({ node, onClose }) {
                             {patterns.map((p, i) => (
                                 <span
                                     key={i}
-                                    className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border border-[#FF1A1A]/15 bg-[#FF1A1A]/5 text-[#FF1A1A]/70"
+                                    className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border border-danger/15 bg-danger/5 text-danger/70"
                                 >
                                     {p}
                                 </span>
@@ -168,7 +167,7 @@ export default function NodeIntelPanel({ node, onClose }) {
                 </div>
 
                 {/* Bottom accent line */}
-                <div className="h-px bg-gradient-to-r from-transparent via-[#FF1A1A]/30 to-transparent" />
+                <div className="h-px bg-gradient-to-r from-transparent via-primary-accent/30 to-transparent" />
             </div>
         </>
     );
