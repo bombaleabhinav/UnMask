@@ -2,7 +2,6 @@ import { useState } from 'react';
 import './index.css';
 import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
-import UploadCommandCenter from './components/UploadCommandCenter';
 import NetworkGraph from './components/NetworkGraph';
 import StatsGrid from './components/StatsGrid';
 import FraudRingMatrix from './components/FraudRingMatrix';
@@ -10,9 +9,7 @@ import AccountsTable from './components/AccountsTable';
 import NodeIntelPanel from './components/NodeIntelPanel';
 import ForensicLoader from './components/ForensicLoader';
 
-
 export default function App() {
-  // Priority: 1. LocalStorage (User override) -> 2. Env Var (Build time) -> 3. Localhost default
   const [apiUrl, setApiUrl] = useState(
     localStorage.getItem('forensic_api_url') || import.meta.env.VITE_API_URL || 'http://localhost:8000'
   );
@@ -24,9 +21,7 @@ export default function App() {
   const [showConfig, setShowConfig] = useState(false);
   const [selectedNode, setSelectedNode] = useState(null);
 
-  // Update localStorage when URL changes
   const handleUrlChange = (newUrl) => {
-    // Remove trailing slash if present
     const cleanUrl = newUrl.replace(/\/$/, '');
     setApiUrl(cleanUrl);
     localStorage.setItem('forensic_api_url', cleanUrl);
@@ -49,7 +44,6 @@ export default function App() {
 
       setProgress({ percent: 40, text: 'Running graph analysis on server...' });
 
-      // Use the dynamic apiUrl
       const response = await fetch(`${apiUrl}/api/analyze`, {
         method: 'POST',
         body: formData,
@@ -79,6 +73,7 @@ export default function App() {
     setResult(null);
     setError(null);
     setLoading(false);
+    setSelectedNode(null);
     setProgress({ percent: 0, text: '' });
   };
 
@@ -112,104 +107,103 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* ── Cinematic Loader ── */}
+      {/* Loader overlay */}
       <ForensicLoader visible={loading} />
 
-      {/* ── Sticky Navbar ── */}
-      <Navbar hasResults={!!result} onNewAnalysis={handleNewAnalysis} />
+      {/* Navbar */}
+      <Navbar hasResults={!!result} />
 
       {!result ? (
-        /* ── Hero / Upload View ── */
-        <>
-          <HeroSection />
-          <section id="upload-section">
-            <UploadCommandCenter
-              onFileUpload={handleFileUpload}
-              loading={loading}
-              progress={progress}
-              error={error}
-            />
-          </section>
-        </>
+        /* ── Landing: Hero + Upload ── */
+        <HeroSection
+          onFileUpload={handleFileUpload}
+          loading={loading}
+          progress={progress}
+          error={error}
+        />
       ) : (
-        /* ── Results View ── */
+        /* ── Results ── */
         <>
           <main className="max-w-[1400px] mx-auto px-6 md:px-10">
-
-            {/* Stats Overview */}
-            <section className="pt-20 pb-10">
+            {/* Stats */}
+            <section className="pt-16 pb-8 animate-[fadeUp_0.5s_ease_both]">
               <StatsGrid summary={result.summary} />
             </section>
 
-            {/* Network Graph */}
-            <section id="graph-section" className="py-20">
-              <div className="flex items-center justify-between mb-10 flex-wrap gap-4">
-                <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+            {/* Graph */}
+            <section id="graph-section" className="py-12 animate-[fadeUp_0.5s_ease_0.1s_both]">
+              <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+                <h2 className="text-2xl font-bold tracking-tight flex items-center gap-3">
                   <span className="text-[#FF1A1A]">🕸️</span> Network Graph
                 </h2>
                 <button
                   onClick={handleDownload}
-                  className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-xl bg-gradient-to-r from-[#FF1A1A] to-[#B00000] text-black hover:scale-[1.03] transition-transform duration-200 cursor-pointer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold tracking-wider uppercase rounded-lg bg-[#B00000] text-white hover:bg-[#FF1A1A] transition-colors duration-200 cursor-pointer"
                 >
-                  ⬇ Download JSON Report
+                  ↓ Download Report
                 </button>
               </div>
               <NetworkGraph graphData={result.graph_data} fraudRings={result.fraud_rings} onNodeSelect={setSelectedNode} />
             </section>
 
-            {/* Fraud Ring Table */}
-            <section id="rings-section" className="py-20">
+            {/* Fraud Rings */}
+            <section id="rings-section" className="py-12 animate-[fadeUp_0.5s_ease_0.2s_both]">
               <FraudRingMatrix rings={result.fraud_rings} />
             </section>
 
-            {/* Suspicious Accounts Table */}
-            <section className="py-20">
+            {/* Suspicious Accounts */}
+            <section className="py-12 animate-[fadeUp_0.5s_ease_0.3s_both]">
               <AccountsTable accounts={result.suspicious_accounts} />
             </section>
 
-            {/* New Analysis CTA */}
-            <section className="text-center py-24 pb-32">
+            {/* New Analysis */}
+            <section className="text-center py-16 pb-24">
               <button
                 onClick={handleNewAnalysis}
-                className="inline-flex items-center gap-3 px-10 py-4 text-base font-semibold rounded-2xl border border-[#FF1A1A]/20 text-neutral-400 hover:text-[#FF1A1A] hover:border-[#FF1A1A]/40 hover:shadow-[0_0_40px_rgba(255,26,26,0.1)] transition-all duration-300 cursor-pointer"
+                className="px-8 py-3 text-xs font-semibold uppercase tracking-[0.2em] rounded-xl border border-[#FF1A1A]/15 text-neutral-500 hover:text-[#FF1A1A] hover:border-[#FF1A1A]/30 transition-all duration-200 cursor-pointer"
               >
-                🔄 Run New Analysis
+                ← New Analysis
               </button>
             </section>
           </main>
 
-          {/* Node Intelligence Panel */}
+          {/* Intel Panel */}
           <NodeIntelPanel node={selectedNode} onClose={() => setSelectedNode(null)} />
         </>
       )}
 
-      {/* ── Footer ── */}
-      <footer className="text-center py-8 border-t border-[#FF1A1A]/5 text-neutral-600 text-sm tracking-wide space-y-2">
-        <p>UNMASK v1.0 — Graph-Based Financial Crime Detection</p>
-        <div>
+      {/* Footer */}
+      <footer className="text-center py-6 border-t border-[#7A0000]/15 text-neutral-700 text-xs tracking-wider">
+        <p>UNMASK v1.0</p>
+        <div className="mt-1">
           <span
             onClick={() => setShowConfig(!showConfig)}
-            className="cursor-pointer underline text-xs opacity-60 hover:opacity-100 hover:text-[#FF1A1A] transition-all duration-200"
+            className="cursor-pointer opacity-40 hover:opacity-80 hover:text-[#FF1A1A] transition-all duration-200"
           >
-            ⚙️ Server: {(() => { try { return new URL(apiUrl).hostname } catch { return 'Invalid URL' } })()}
+            ⚙ {(() => { try { return new URL(apiUrl).hostname } catch { return 'localhost' } })()}
           </span>
-
           {showConfig && (
-            <div className="mt-3 inline-block">
+            <div className="mt-2 inline-block">
               <input
                 type="text"
                 defaultValue={apiUrl}
-                placeholder="Enter Backend URL (e.g. https://xyz.gradio.live)"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleUrlChange(e.target.value);
-                }}
+                placeholder="Backend URL"
+                onKeyDown={(e) => { if (e.key === 'Enter') handleUrlChange(e.target.value); }}
                 onBlur={(e) => handleUrlChange(e.target.value)}
-                className="px-3 py-2 rounded-lg bg-neutral-900 border border-[#FF1A1A]/20 text-neutral-300 text-sm w-[300px] focus:outline-none focus:border-[#FF1A1A]/50"
+                className="px-3 py-1.5 rounded-lg bg-neutral-950 border border-[#7A0000]/20 text-neutral-400 text-xs w-[260px] focus:outline-none focus:border-[#FF1A1A]/40"
               />
             </div>
           )}
         </div>
       </footer>
+
+      {/* Fade-up keyframe */}
+      <style>{`
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

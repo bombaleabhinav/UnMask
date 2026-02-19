@@ -7,10 +7,11 @@ export default function ForensicLoader({ visible }) {
     useEffect(() => {
         if (visible) {
             setShow(true);
-            requestAnimationFrame(() => setOpacity(1));
+            // Double-rAF ensures DOM paint before opacity transition
+            requestAnimationFrame(() => requestAnimationFrame(() => setOpacity(1)));
         } else {
             setOpacity(0);
-            const timer = setTimeout(() => setShow(false), 500);
+            const timer = setTimeout(() => setShow(false), 600);
             return () => clearTimeout(timer);
         }
     }, [visible]);

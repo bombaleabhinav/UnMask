@@ -24,42 +24,53 @@ function AnimatedNumber({ value }) {
     return <span ref={ref}>0</span>;
 }
 
+const STAT_CONFIG = [
+    { key: 'total_accounts_analyzed', label: 'Accounts Analyzed', icon: '🏦' },
+    { key: 'suspicious_accounts_flagged', label: 'Suspicious Accounts', icon: '🚨', accent: true },
+    { key: 'fraud_rings_detected', label: 'Fraud Rings', icon: '🔗', accent: true },
+    { key: 'total_transactions', label: 'Transactions', icon: '📄' },
+];
+
 export default function StatsGrid({ summary }) {
     return (
-        <section className="stats-section">
-            <div className="section-header">
-                <h2>📊 Analysis Summary</h2>
+        <section>
+            <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+                <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+                    <span className="text-[#FF1A1A]">📊</span> Analysis Summary
+                </h2>
             </div>
 
-            <div className="stats-grid">
-                <div className="stat-card">
-                    <div className="stat-icon">🏦</div>
-                    <div className="stat-value"><AnimatedNumber value={summary.total_accounts_analyzed} /></div>
-                    <div className="stat-label">Accounts Analyzed</div>
-                </div>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                {STAT_CONFIG.map((stat) => (
+                    <div
+                        key={stat.key}
+                        className={`
+              relative rounded-xl px-5 py-6 border transition-all duration-300
+              ${stat.accent
+                                ? 'border-[#FF1A1A]/15 bg-[#FF1A1A]/[0.03] hover:border-[#FF1A1A]/30 hover:shadow-[0_0_30px_rgba(255,26,26,0.06)]'
+                                : 'border-white/[0.04] bg-white/[0.015] hover:border-white/[0.08] hover:bg-white/[0.025]'
+                            }
+            `}
+                    >
+                        <div className="text-2xl mb-3">{stat.icon}</div>
+                        <div className={`text-2xl font-black font-mono tracking-tight ${stat.accent ? 'text-[#FF1A1A]' : 'text-white/90'}`}>
+                            <AnimatedNumber value={summary[stat.key]} />
+                        </div>
+                        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-600 mt-1.5">
+                            {stat.label}
+                        </div>
+                    </div>
+                ))}
 
-                <div className="stat-card stat-danger">
-                    <div className="stat-icon">🚨</div>
-                    <div className="stat-value"><AnimatedNumber value={summary.suspicious_accounts_flagged} /></div>
-                    <div className="stat-label">Suspicious Accounts</div>
-                </div>
-
-                <div className="stat-card stat-warning">
-                    <div className="stat-icon">🔗</div>
-                    <div className="stat-value"><AnimatedNumber value={summary.fraud_rings_detected} /></div>
-                    <div className="stat-label">Fraud Rings</div>
-                </div>
-
-                <div className="stat-card">
-                    <div className="stat-icon">📄</div>
-                    <div className="stat-value"><AnimatedNumber value={summary.total_transactions} /></div>
-                    <div className="stat-label">Transactions</div>
-                </div>
-
-                <div className="stat-card">
-                    <div className="stat-icon">⚡</div>
-                    <div className="stat-value">{summary.processing_time_seconds}s</div>
-                    <div className="stat-label">Processing Time</div>
+                {/* Processing time — special card */}
+                <div className="relative rounded-xl px-5 py-6 border border-white/[0.04] bg-white/[0.015] hover:border-white/[0.08] hover:bg-white/[0.025] transition-all duration-300">
+                    <div className="text-2xl mb-3">⚡</div>
+                    <div className="text-2xl font-black font-mono tracking-tight text-white/90">
+                        {summary.processing_time_seconds}s
+                    </div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-600 mt-1.5">
+                        Processing Time
+                    </div>
                 </div>
             </div>
         </section>

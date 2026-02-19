@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import cytoscape from 'cytoscape';
 
 /* ── Helpers ── */
@@ -120,20 +120,19 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
     const [showLabels, setShowLabels] = useState(true);
     const [cyReady, setCyReady] = useState(false);
 
-    // Parallax effect
-    const handleMouseMove = useCallback((e) => {
-        const wrapper = wrapperRef.current;
-        if (!wrapper) return;
-        const rect = wrapper.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        const dx = (e.clientX - cx) / rect.width;
-        const dy = (e.clientY - cy) / rect.height;
+    // Resize observer for proper graph scaling
+    useEffect(() => {
+        const cy = cyRef.current;
         const container = containerRef.current;
-        if (container) {
-            container.style.transform = `translate(${dx * 6}px, ${dy * 6}px)`;
-        }
-    }, []);
+        if (!cy || !container) return;
+
+        const observer = new ResizeObserver(() => {
+            cy.resize();
+            cy.fit(undefined, 40);
+        });
+        observer.observe(container);
+        return () => observer.disconnect();
+    }, [cyReady]);
 
     useEffect(() => {
         if (!containerRef.current || !graphData) return;
@@ -411,6 +410,7 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
             cyRef.current = null;
             setCyReady(false);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [graphData, fraudRings, showLabels]);
 
     const zoomIn = () => {
@@ -440,15 +440,11 @@ export default function NetworkGraph({ graphData, fraudRings, onNodeSelect }) {
             <div
                 ref={wrapperRef}
                 className="relative rounded-xl border border-[#FF1A1A]/10 overflow-hidden bg-black"
-                onMouseMove={handleMouseMove}
-                onMouseLeave={() => {
-                    if (containerRef.current) containerRef.current.style.transform = 'translate(0,0)';
-                }}
             >
                 <div
                     ref={containerRef}
-                    className="w-full transition-transform duration-300 ease-out"
-                    style={{ height: '650px' }}
+                    className="w-full"
+                    style={{ height: 'clamp(400px, 50vw, 600px)' }}
                 />
 
                 {/* Particle overlay */}
