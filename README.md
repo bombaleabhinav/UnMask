@@ -9,7 +9,7 @@
 [https://un-mask-hqzr.vercel.app/](https://un-mask-hqzr.vercel.app/)
 
 **Demo Video (LinkedIn Submission):**
-[[https://linkedin.com/your-video-link](https://www.linkedin.com/posts/abhinavbombale_rifthackathon-moneymulingdetection-financialcrime-activity-7430434864811843584-FFxz?utm_source=share&utm_medium=member_desktop&rcm=ACoAAF1SK9YBTX1R8JIl1O2aPrqq2i9JTr5PjD4)]([https://linkedin.com/your-video-link](https://www.linkedin.com/posts/abhinavbombale_rifthackathon-moneymulingdetection-financialcrime-activity-7430434864811843584-FFxz?utm_source=share&utm_medium=member_desktop&rcm=ACoAAF1SK9YBTX1R8JIl1O2aPrqq2i9JTr5PjD4))
+[[https://linkedin.com/your-video-link](https://www.linkedin.com/posts/abhinavbombale_rifthackathon-moneymulingdetection-financialcrime-activity-7430434864811843584-FFxz?utm_source=share&utm_medium=member_desktop&rcm=ACoAAF1SK9YBTX1R8JIl1O2aPrqq2i9JTr5PjD4)]
 
 #### 3. Tech Stack
 | Component | Technology |
