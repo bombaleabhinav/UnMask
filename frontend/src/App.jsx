@@ -8,7 +8,7 @@ import CustomCursor from './components/CustomCursor';
 
 export default function App() {
   const [apiUrl, setApiUrl] = useState(
-    localStorage.getItem('forensic_api_url') || import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    localStorage.getItem('forensic_api_url') || import.meta.env.VITE_API_URL || ''
   );
 
   const [result, setResult] = useState(null);
